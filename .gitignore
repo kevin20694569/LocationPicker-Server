@@ -1,5 +1,5 @@
-media
-restaurantimage
-userimage
+public
 node_modules
-deprecated
+dist
+development.env
+production.env

@@ -3,24 +3,40 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon ./bin/www"
+    "start": "tsc && cross-env dotenv_config_path=./production.env nodemon ./dist/bin/www",
+    "start:dev": "tsc && cross-env dotenv_config_path=./development.env nodemon ./dist/bin/www",
+    "build": "tsc"
   },
   "dependencies": {
+    "@types/multer": "^1.4.11",
     "axios": "^1.5.1",
     "bcrypt": "^5.1.1",
+    "concurrently": "^8.2.2",
     "cookie-parser": "~1.4.4",
+    "cross-env": "^7.0.3",
     "debug": "~2.6.9",
+    "dotenv": "^16.4.5",
     "ejs": "~2.6.1",
     "express": "~4.16.1",
+    "helmet": "^7.1.0",
     "http-errors": "~1.6.3",
     "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.2",
     "morgan": "~1.9.1",
     "multer": "^1.4.5-lts.1",
     "mysql": "^2.18.1",
     "mysql2": "^3.6.1",
+    "neo4j-driver": "^5.14.0",
     "nodemon": "^3.0.1",
+    "progress-stream": "^2.0.0",
+    "redis": "^4.6.10",
     "short-uuid": "^4.2.2",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2"
+  },
+  "devDependencies": {
+    "@types/dotenv": "^8.2.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
   }
 }
