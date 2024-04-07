@@ -11,7 +11,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     super(password);
   }
 
-  async findRestaurantID(restaurant_ID: String, firstGrade: number) {
+  async findRestaurantID(restaurant_ID: String, firstGrade?: number) {
     try {
       await this.getConnection();
 
@@ -47,8 +47,13 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let business_time = await this.business_TimeService.getPlaceBusinessTimes(restaurant_ID);
       let json = {
         ...restaurantDetail,
-        ...business_time["_doc"],
       };
+      if (business_time) {
+        json = {
+          ...json,
+          ...business_time["_doc"],
+        };
+      }
       return json;
     } catch (error) {
       await this.deleteRestaurant(restaurant_ID);
@@ -88,12 +93,12 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     }
   }
 
-  async getrestaurantDistanceAndDetail(restaurant_id: String, lat: Number, lng: Number) {
+  async getrestaurantDistanceAndDetail(restaurant_id: String, lat?: Number, lng?: Number) {
     try {
       await this.getConnection();
 
       let query = `select *, ST_DISTANCE(POINT(restaurants.restaurant_longitude, restaurants.restaurant_latitude), POINT(?, ?)) AS distance, ${this.selectString}  from restaurants where restaurants.restaurant_id = ?;`;
-      var params = [lng, lat, restaurant_id];
+      var params = [lng ?? 0, lat ?? 0, restaurant_id];
       let results: any[];
       let fields: any;
       [results, fields] = await this.connection.query(query, params);
@@ -163,6 +168,9 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
 
   async getRestaurantsDetail(restaurant_Ids: String[]) {
     try {
+      if (restaurant_Ids.length < 1) {
+        return [];
+      }
       await this.getConnection();
       let query = `Select *, ${this.selectString} from restaurants Where restaurant_id in (?)`;
       let params = [restaurant_Ids];

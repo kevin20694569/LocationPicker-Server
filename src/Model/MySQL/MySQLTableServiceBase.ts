@@ -2,12 +2,12 @@ import mysql from "mysql2/promise";
 import "dotenv/config";
 
 abstract class MySQLTableControllerBase {
-  private dbPassword: string = process.env.DB_Password;
-  protected serverIP: string = process.env.ServerIP;
+  private dbPassword: string = process.env.DB_Password as string;
+  protected serverIP: string = process.env.ServerIP as string;
   protected pool: mysql.Pool;
-  protected connection?: mysql.PoolConnection;
+  protected connection: mysql.PoolConnection;
   constructor(password?: string) {
-    this.dbPassword = process.env.DB_Password;
+    this.dbPassword = process.env.DB_Password as string;
     if (password) {
       this.dbPassword = password;
     }
@@ -21,11 +21,7 @@ abstract class MySQLTableControllerBase {
 
   async release() {
     if (this.connection) {
-      try {
-        this.connection.release();
-      } catch (error) {
-        throw new Error(`關閉mysql 失敗 messgae : ${error.message}`);
-      }
+      this.connection.release();
     }
   }
   async getConnection() {
@@ -33,7 +29,7 @@ abstract class MySQLTableControllerBase {
       try {
         this.connection = await this.pool.getConnection();
       } catch (error) {
-        throw new Error(`mysql伺服器連接失敗 messag${error.message}`);
+        throw new Error(`mysql伺服器連接失敗 messag${(error as Error).message}`);
       }
     }
   }

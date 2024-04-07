@@ -5,6 +5,7 @@ import multer, { Multer, diskStorage, StorageEngine, FileFilterCallback } from "
 import fs from "fs";
 import path from "path";
 import "dotenv/config";
+import mongoose from "mongoose";
 
 class PostController extends ControllerBase {
   protected storage: StorageEngine = diskStorage({
@@ -160,12 +161,11 @@ class PostController extends ControllerBase {
     try {
       let id = req.params.id;
       let { request_user_id } = req.query;
-      let post = await this.mongodbPostService.getPostFromID(id);
-      let data = await this.mergeDataFromPosts(post, request_user_id);
+      let posts = await this.mongodbPostService.getPostFromID(id);
+      let data = await this.mergeDataFromPosts(posts, request_user_id);
       let json = data[0];
       res.json(json);
     } catch (error) {
-      next(error);
       res.status(404).send(error.message);
       console.log(error);
     } finally {
@@ -208,11 +208,12 @@ class PostController extends ControllerBase {
       await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, grade as number);
       await this.mysqlRestaurantsTableService.updateRestaurantPostsCountWithInput(restaurant_id, 1);
       await this.mysqlUsersTableService.modifyUserPostsCount(user_id, 1);
+
       req.ioService.emitUploadTaskFinished(socket_id, true);
       res.status(200).json("上傳成功");
     } catch (error) {
+      console.log(error);
       await this.deletePost(error, req, res, next);
-      res.json({ message: "上傳postError" });
     } finally {
       res.end();
     }
@@ -246,7 +247,7 @@ class PostController extends ControllerBase {
       let post_ids = [];
       let users_ids: number[] = [];
       let restaurant_ids = posts.map((post) => {
-        post_ids.push(post.post_id.toHexString());
+        post_ids.push(post.post_id);
         users_ids.push(post.user_id);
         return post.restaurant_id;
       });

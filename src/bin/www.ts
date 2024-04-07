@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 import "dotenv/config";
-import SocketIOSingletonService from "../Model/SocketIOServer/SocketIOSingletonService";
+import SocketIOSingletonController from "../controller/SocketIO/SocketIOSingletonController";
 
 var app = require("../app");
 var debug = require("debug")("locationpicker-server:server");
@@ -32,7 +32,7 @@ var server = http.createServer(app);
 server.listen(port);
 server.on("error", onError);
 server.on("listening", onListening);
-new SocketIOSingletonService(server);
+new SocketIOSingletonController(server);
 MongoDB.connectToMongoDB();
 /**
  * Normalize a port into a number, string, or false.

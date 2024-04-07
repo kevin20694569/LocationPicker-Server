@@ -1,5 +1,13 @@
 import mongoose, { Model, Mongoose } from "mongoose";
+
 import "dotenv/config";
+
+enum MessageType {
+  General = 0,
+  PostShare = 1,
+  UserShare = 2,
+  Restaurant = 3,
+}
 
 let StandardPostProjectOutput: Object = {
   _id: 0,
@@ -120,6 +128,11 @@ const PostSchema = new mongoose.Schema({
   },
 });
 const messageSchema = new mongoose.Schema({
+  type: {
+    type: Number,
+    enum: [MessageType.General, MessageType.PostShare, MessageType.UserShare, MessageType.Restaurant],
+    default: MessageType.General,
+  },
   room_id: {
     type: String,
     require: true,
@@ -138,6 +151,15 @@ const messageSchema = new mongoose.Schema({
   },
 
   shared_Post_id: {
+    type: String,
+    require: false,
+  },
+
+  shared_User_id: {
+    type: Number,
+    require: false,
+  },
+  shared_Restaurant_id: {
     type: String,
     require: false,
   },
@@ -257,4 +279,5 @@ export {
   StandardPostProjectOutput,
   RandomPostProjectOutput,
   ReactionProjectOutput,
+  MessageType,
 };

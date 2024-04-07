@@ -1,5 +1,5 @@
 import RouteBase from "../RouteBase";
-import UserController from "controller/APIController/UserController";
+import UserController from "../../controller/APIController/UserController";
 import FriendRequestController from "../../controller/APIController/FriendRequestController";
 import FriendShipController from "../../controller/APIController/FriendShipController";
 import FriendRequestRoute from "./FriendRequestRoute/FriendRequestRoute";

@@ -5,7 +5,7 @@ import multer, { Multer, diskStorage, StorageEngine } from "multer";
 import shortUUID from "short-uuid";
 import { Request, Response, NextFunction } from "express";
 import path from "path";
-import SocketIOSingletonService from "../../Model/SocketIOServer/SocketIOSingletonService";
+import SocketIOSingletonController from "../../controller/SocketIO/SocketIOSingletonController";
 import NearLocationRoute from "./NearLocationRoute/NearLocationRoute";
 class PostRoute extends RouteBase {
   protected postController: PostController = new PostController();
@@ -77,7 +77,7 @@ class PostRoute extends RouteBase {
 
       (req as any).json = json;
       (req as any).socket_id = json.socket_id;
-      (req as any).ioService = new SocketIOSingletonService();
+      (req as any).ioService = new SocketIOSingletonController();
       progress.on("progress", function (obj) {
         (req as any).ioService.emitUploadProgressToSocket(json.socket_id, obj.percentage);
       });

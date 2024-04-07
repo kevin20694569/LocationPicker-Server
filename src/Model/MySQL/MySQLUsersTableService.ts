@@ -1,4 +1,4 @@
-import { resultTransformers } from "neo4j-driver";
+import "module-alias";
 import MySQLTableControllerBase from "./MySQLTableServiceBase";
 class MySQLUsersTableService extends MySQLTableControllerBase {
   protected serverUserImageIP = this.serverIP + "/userimage/";

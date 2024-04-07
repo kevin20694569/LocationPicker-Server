@@ -74,6 +74,7 @@ class GoogleMapAPIService {
 
     const filePath = path.resolve(__dirname, `../../../public/media/restaurantimage/${filename}`);
     const writer = fs.createWriteStream(filePath);
+
     response.data.pipe(writer);
     return await new Promise((resolve, reject) => {
       writer.on("finish", resolve);

@@ -124,7 +124,7 @@ class Neo4jFriendShipService {
         RETURN friendship
       `;
       let results = await this.session.run(query, { from_user_id, to_user_id });
-
+      return results.records.length != 0;
       let objects = this.transFormToJSONNeo4jResults(results);
       return objects.length != 0;
     } catch (error) {
@@ -221,7 +221,7 @@ class Neo4jFriendShipService {
   transFormToJSONNeo4jResults(searchResults: QueryResult): object[] {
     try {
       let results = searchResults.records.map((record) => {
-        let json = {};
+        let json: any = {};
 
         let keys = record["keys"];
         keys.forEach((key) => {

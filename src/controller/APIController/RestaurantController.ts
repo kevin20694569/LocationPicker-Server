@@ -11,8 +11,13 @@ class RestaurantController extends ControllerBase {
       let business_times = await this.mongodbBusiness_TimeService.getPlaceBusinessTimes(place_id);
       let mergedResult = {
         ...result,
-        ...business_times["_doc"],
       };
+      if (business_times) {
+        mergedResult = {
+          ...mergedResult,
+          ...business_times["_doc"],
+        };
+      }
       if (result == null) {
         res.send("找不到餐廳");
         console.log("找不到餐廳");

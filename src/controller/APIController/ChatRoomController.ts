@@ -20,7 +20,6 @@ class ChatRoomController extends ControllerBase {
       let user_ids = results.map((result) => {
         room_ids.push(result.room_id);
         let array = result.room_id.split("_");
-
         if (parseInt(array[0]) == parseInt(request_user_id)) {
           result["room_user_id"] = parseInt(array[1]);
           return parseInt(array[1]);
@@ -37,12 +36,14 @@ class ChatRoomController extends ControllerBase {
       results = results.map((result, index) => {
         if (result.shared_Post_id) {
           result.message = "分享了一則貼文";
+        } else if (result.shared_User_id) {
+          result.message = "分享了一個帳號";
+        } else if (result.shared_Restaurant_id) {
+          result.message = "分享了一個地點";
         }
-        if (result["sender_id"] == request_user_id) {
-          result["isRead"] = true;
-        }
+
         let json = {
-          lastMessage: result,
+          message: result,
           user: usersMap[result["room_user_id"]],
         };
         return json;
@@ -74,7 +75,7 @@ class ChatRoomController extends ControllerBase {
       });
       let user = await this.mysqlUsersTableService.getUserProfileByID(anotherUser_id);
       res.json({
-        lastMessage: result,
+        message: result,
         user: user,
       });
     } catch (error) {

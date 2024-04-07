@@ -2,7 +2,7 @@ import MySQLRestaurantsTableService from "../Model/MySQL/MySQLRestaurantsTableSe
 import MySQLUsersTableService from "../Model/MySQL/MySQLUsersTableService";
 import GoogleMapAPIService from "../Model/GoogleMapAPI/GoogleMapAPIService";
 import MongoDBBusiness_TimeService from "../Model/MongoDB/MongoDBBusinessTimeService";
-import SocketIOSingletonService from "../Model/SocketIOServer/SocketIOSingletonService";
+import SocketIOSingletonController from "../controller/SocketIO/SocketIOSingletonController";
 import MongoDBPostService from "../Model/MongoDB/MongoDBPostService";
 import MongoDB from "../Model/MongoDB/MongoDB";
 import Neo4jFriendShipService from "../Model/Neo4j/Neo4jFriendShipService";
@@ -14,7 +14,7 @@ class Refactor {
   userTableService;
   googleMapAPIService = new GoogleMapAPIService();
   mongoDBBusiness_TimeService = new MongoDBBusiness_TimeService();
-  socketIOSingletonService = new SocketIOSingletonService();
+  socketIOSingletonService = new SocketIOSingletonController();
   mongoDBPostService = new MongoDBPostService();
   neo4jFriendShipService = new Neo4jFriendShipService();
   mongoDBConnection = MongoDB;

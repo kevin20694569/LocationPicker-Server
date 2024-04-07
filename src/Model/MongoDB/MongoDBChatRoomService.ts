@@ -158,6 +158,7 @@ class MongoDBChatRoomService {
     try {
       let room = await this.chatRoomModel.findOne({ room_users: { $all: ids } }, { room_id: 1, room_users: 1 });
       if (room) {
+        console.log(room);
         return room;
       }
       let room_id = this.mergeEachidToRoomID(ids);
@@ -177,17 +178,22 @@ class MongoDBChatRoomService {
     return room_id;
   }
 
+  async getRoomByRoomID(room_id: string) {
+    let room = await this.chatRoomModel.findOne({ room_id: room_id }, { room_id: 1, room_users: 1 });
+    return room;
+  }
+
   async getPreviewsByUserId(user_id: number, dateString: String, room_idToExclude: String[]) {
     try {
       var user = await this.UserModel.findOne({ user_id: user_id });
       var chatRoomIds = user.chatRoomIds;
       let date: Date;
+
       if (!dateString) {
         date = new Date();
       } else {
-        date = new Date(date);
+        date = new Date(dateString as string);
       }
-
       var results = await this.MessageModel.aggregate([
         {
           $match: {
@@ -203,6 +209,8 @@ class MongoDBChatRoomService {
                 message: "$message",
                 created_time: "$created_time",
                 shared_Post_id: "$shared_Post_id",
+                shared_User_id: "$shared_User_id",
+                shared_Restaurant_id: "$shared_Restaurant_id",
                 sender_id: "$sender_id",
                 isRead: "$isRead",
               },
@@ -232,6 +240,8 @@ class MongoDBChatRoomService {
             sender_id: "$lastMessage.sender_id", // 将 sender_id 的值赋给新的字段 senderId
             created_time: "$lastMessage.created_time",
             shared_Post_id: "$lastMessage.shared_Post_id",
+            shared_User_id: "$lastMessage.shared_User_id",
+            shared_Restaurant_id: "$lastMessage.shared_Restaurant_id",
             message: "$lastMessage.message",
             isRead: "$lastMessage.isRead",
           },
@@ -243,6 +253,8 @@ class MongoDBChatRoomService {
             created_time: 1,
             message: 1,
             shared_Post_id: 1,
+            shared_User_id: 1,
+            shared_Restaurant_id: 1,
             isRead: 1,
           },
         },

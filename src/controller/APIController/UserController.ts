@@ -65,18 +65,19 @@ class UserController extends ControllerBase {
       date = new Date(date);
     }
     try {
-      let results = await this.mysqlUsersTableService.getUserProfileByID(id);
-      let isFriend = await this.neo4jFriendShipService.checkIsFriend(request_user_id, id);
-      results["isFriend"] = isFriend;
-      if (results.length <= 0) {
+      let result = await this.mysqlUsersTableService.getUserProfileByID(id);
+      if (!result) {
         throw new Error("getUserProfile失敗");
-      } else {
-        res.json(results);
-        res.status(200);
       }
+      let isFriend = await this.neo4jFriendShipService.checkIsFriend(parseInt(request_user_id), parseInt(id));
+      let json = {
+        user: result,
+        isFriend: isFriend,
+      };
+      res.json(json);
+      res.status(200);
     } catch (error) {
       res.status(404);
-
       console.log(error);
     } finally {
       res.end();

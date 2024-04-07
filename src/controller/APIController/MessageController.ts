@@ -13,41 +13,7 @@ class MessageController extends ControllerBase {
         res.status(200);
         return;
       }
-
-      let shard_post_ids = [];
-      let indexArray = [];
-
-      messages.forEach((message, index) => {
-        if (message.shared_Post_id) {
-          shard_post_ids.push(message.shared_Post_id);
-          indexArray.push(index);
-        }
-      });
-      if (shard_post_ids.length > 0) {
-        let restaurantsMap = {};
-        let postsMap = {};
-        let posts = await this.mongodbPostService.getPostsFromPostsID(shard_post_ids);
-        let restaurants_ids = posts.map((post) => {
-          let post_id = post.post_id.toHexString();
-          postsMap[post_id] = post;
-          return post.restaurant_id;
-        });
-        let restaurants = await this.mysqlRestaurantsTableService.getRestaurantsDetail(restaurants_ids);
-        restaurants.forEach((restaurant) => {
-          restaurantsMap[restaurant.restaurant_id] = restaurant;
-        });
-        indexArray.forEach((indexInMessagesArray) => {
-          let message = messages[indexInMessagesArray];
-          let post_id = message.shared_Post_id;
-          let post = postsMap[post_id];
-          let restaurant = restaurantsMap[post.restaurant_id];
-          messages[indexInMessagesArray] = {
-            ...message._doc,
-            post: post,
-            restaurant: restaurant,
-          };
-        });
-      }
+      await this.mergeMessageData(messages);
       res.json(messages);
       res.status(200);
       return;
@@ -63,7 +29,10 @@ class MessageController extends ControllerBase {
     try {
       let { user_ids } = req.body;
       let { date } = req.query;
-      let chatroom = await this.mongodbChatRoomService.getRoomByUserEachids(user_ids);
+      let num_User_ids = user_ids.map((id) => {
+        return parseInt(id);
+      });
+      let chatroom = await this.mongodbChatRoomService.getRoomByUserEachids(num_User_ids);
       var messages = await this.mongodbMessageService.getRoomMessage(chatroom.room_id, date, 20);
       if (messages.length < 1) {
         res.json([]);
@@ -71,6 +40,7 @@ class MessageController extends ControllerBase {
         return;
       }
       await this.mergeMessageData(messages);
+
       res.json(messages);
       res.status(200);
       return;
@@ -86,37 +56,71 @@ class MessageController extends ControllerBase {
   async mergeMessageData(messages: any[]) {
     try {
       let shard_post_ids = [];
+      let shared_user_ids = [];
+      let shared_restaurant_ids = [];
       let indexArray = [];
 
       messages.forEach((message, index) => {
         if (message.shared_Post_id) {
           shard_post_ids.push(message.shared_Post_id);
           indexArray.push(index);
+        } else if (message.shared_User_id) {
+          shared_user_ids.push(message.shared_User_id);
+          indexArray.push(index);
+        } else if (message.shared_Restaurant_id) {
+          shared_restaurant_ids.push(message.shared_Restaurant_id);
+          indexArray.push(index);
         }
       });
-      if (shard_post_ids.length > 0) {
+      if (shard_post_ids.length > 0 || shared_user_ids.length > 0 || shared_restaurant_ids.length > 0) {
         let restaurantsMap = {};
         let postsMap = {};
+        let usersMap = {};
         let posts = await this.mongodbPostService.getPostsFromPostsID(shard_post_ids);
         let restaurants_ids = posts.map((post) => {
           let post_id = post.post_id.toHexString();
           postsMap[post_id] = post;
           return post.restaurant_id;
         });
+        let users = await this.mysqlUsersTableService.getUserByIDs(shared_user_ids);
         let restaurants = await this.mysqlRestaurantsTableService.getRestaurantsDetail(restaurants_ids);
         restaurants.forEach((restaurant) => {
           restaurantsMap[restaurant.restaurant_id] = restaurant;
         });
+        users.forEach((user) => {
+          usersMap[user.user_id] = user;
+        });
         indexArray.forEach((indexInMessagesArray) => {
           let message = messages[indexInMessagesArray];
-          let post_id = message.shared_Post_id;
-          let post = postsMap[post_id];
-          let restaurant = restaurantsMap[post.restaurant_id];
-          messages[indexInMessagesArray] = {
-            ...message._doc,
-            post: post,
-            restaurant: restaurant,
-          };
+          if (message.shared_Post_id) {
+            let post_id = message.shared_Post_id;
+            let post = postsMap[post_id];
+            let restaurant = restaurantsMap[post.restaurant_id];
+
+            messages[indexInMessagesArray] = {
+              ...message._doc,
+              sharedPost: post,
+              sharedPostRestaurant: restaurant,
+            };
+          }
+          if (message.shared_User_id) {
+            let user_id = message.shared_User_id;
+            let user = usersMap[user_id];
+
+            messages[indexInMessagesArray] = {
+              ...message._doc,
+              sharedUser: user,
+            };
+          }
+          if (message.shared_Restaurant_id) {
+            let restaurant_id = message.shared_Restaurant_id;
+            let restaurant = restaurantsMap[restaurant_id];
+
+            messages[indexInMessagesArray] = {
+              ...message._doc,
+              sharedRestaurant: restaurant,
+            };
+          }
         });
       }
       return messages;

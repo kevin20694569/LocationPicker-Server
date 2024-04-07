@@ -7,6 +7,9 @@
     "start:dev": "tsc && cross-env dotenv_config_path=./development.env nodemon ./dist/bin/www",
     "build": "tsc"
   },
+  "_moduleAliases": {
+    "@mysql": "dist/Model/MYSQL"
+  },
   "dependencies": {
     "@types/multer": "^1.4.11",
     "axios": "^1.5.1",
@@ -21,6 +24,7 @@
     "helmet": "^7.1.0",
     "http-errors": "~1.6.3",
     "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
     "mongoose": "^8.0.2",
     "morgan": "~1.9.1",
     "multer": "^1.4.5-lts.1",
@@ -37,6 +41,7 @@
   "devDependencies": {
     "@types/dotenv": "^8.2.0",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.3"
   }
 }
