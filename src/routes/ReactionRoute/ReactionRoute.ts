@@ -6,7 +6,7 @@ class ReactionRoute extends RouteBase {
 
   protected registerRoute() {
     this.router.get("/post/:id", (req, res, next) => {
-      this.reactionController.getPostReaction(req, res, next);
+      this.reactionController.getPostReactions(req, res, next);
     });
     this.router.post("/post/:id", (req, res, next) => {
       this.reactionController.updateReaction(req, res, next);

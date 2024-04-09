@@ -4,17 +4,22 @@ import ControllerBase from "../ControllerBase";
 class ReactionController extends ControllerBase {
   protected postMediaFolderString = process.env.ServerIP + "/public/media";
 
-  async getPostReaction(req: Request, res: Response, next: NextFunction) {
-    let post_id = req.params.id;
-    let { user_id } = req.body;
-    let results = await this.neo4jFriendShipService.searchFriendsByUserID(user_id);
+  async getPostReactions(req: Request, res: Response, next: NextFunction) {
+    const post_id = req.params.id;
+    const { request_user_id, date } = req.query;
+    let dateObject: Date = new Date();
+    if (date) {
+      dateObject = new Date(date as string);
+    }
+    const request_user_id_num = parseInt(request_user_id as string);
+    let results = await this.neo4jFriendShipService.searchFriendsByUserID(request_user_id_num);
 
     let friends_ids = results.map((result) => {
       return result.friend.user_ID;
     });
-    let reactions = await this.mongodbReactionService.getPostReactions(post_id, user_id, friends_ids);
+    let reactions = await this.mongodbReactionService.getPostReactions(post_id, request_user_id_num, friends_ids, dateObject);
     res.status(200);
-    res.send(reactions);
+    res.json(reactions);
     res.end();
   }
 

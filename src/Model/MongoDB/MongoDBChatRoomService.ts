@@ -124,7 +124,7 @@ class MongoDBChatRoomService {
       if (!result) {
         throw new Error("沒有這個ChatRoom");
       }
-      let messages = await this.messageService.getRoomMessage(room_id, "", 1);
+      let messages = await this.messageService.getRoomMessage(room_id, new Date(), 1);
       if (messages.length < 1) {
         return {
           room_id: result.room_id,
@@ -158,7 +158,6 @@ class MongoDBChatRoomService {
     try {
       let room = await this.chatRoomModel.findOne({ room_users: { $all: ids } }, { room_id: 1, room_users: 1 });
       if (room) {
-        console.log(room);
         return room;
       }
       let room_id = this.mergeEachidToRoomID(ids);
@@ -183,22 +182,15 @@ class MongoDBChatRoomService {
     return room;
   }
 
-  async getPreviewsByUserId(user_id: number, dateString: String, room_idToExclude: String[]) {
+  async getPreviewsByUserId(user_id: number, date: Date, room_idToExclude: String[]) {
     try {
       var user = await this.UserModel.findOne({ user_id: user_id });
       var chatRoomIds = user.chatRoomIds;
-      let date: Date;
-
-      if (!dateString) {
-        date = new Date();
-      } else {
-        date = new Date(dateString as string);
-      }
       var results = await this.MessageModel.aggregate([
         {
           $match: {
             room_id: { $in: chatRoomIds, $nin: room_idToExclude },
-            created_time: { $lt: date },
+            //created_time: { $lt: date },
           },
         },
         {

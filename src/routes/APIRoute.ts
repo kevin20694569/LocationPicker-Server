@@ -5,15 +5,27 @@ import RestaurantRoute from "./RestaurantRoute/RestaurantRoute";
 import ReactionRoute from "./ReactionRoute/ReactionRoute";
 import FriendRoute from "./FriendRoute/FriendRoute";
 import ChatRoomRoute from "./ChatRoomRoute/ChatRoomRoute";
+import "dotenv/config";
+import jwt from "jsonwebtoken";
+import UserAccountRoute from "./UserAccountRoute/UserAccountRoute";
+
 class ApiRoute extends RouteBase {
+  private jwtKey: string = process.env.jwtKey;
   protected postRoute: PostRoute = new PostRoute();
   protected userRoute: UserRoute = new UserRoute();
   protected restaurantRoute: RestaurantRoute = new RestaurantRoute();
   protected reactionRoute: ReactionRoute = new ReactionRoute();
   protected friendRoute: FriendRoute = new FriendRoute();
   protected chatroomRoute: ChatRoomRoute = new ChatRoomRoute();
+  protected userAccountRoute: UserAccountRoute = new UserAccountRoute();
 
   protected registerRoute() {
+    this.router.use("/useraccount", (req, res, next) => {
+      this.userAccountRoute.router(req, res, next);
+    });
+    this.router.use("/", (req, res, next) => {
+      this.jwtAuth(req, res, next);
+    });
     this.router.use("/posts", (req, res, next) => {
       this.postRoute.router(req, res, next);
     });
@@ -32,6 +44,28 @@ class ApiRoute extends RouteBase {
     this.router.use("/chatrooms", (req, res, next) => {
       this.chatroomRoute.router(req, res, next);
     });
+    this.router.use("/", (err, req, res, next) => {
+      res.end();
+    });
+  }
+
+  jwtAuth(req, res, next) {
+    next();
+    return;
+    let auth = req.headers.authorization;
+    let token = auth.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "no token" });
+    } else {
+      jwt.verify(token, this.jwtKey, async (err, decoded) => {
+        if (err) {
+          res.status(401).json({ message: "token error", detail: err });
+          next(err);
+          return;
+        }
+        next();
+      });
+    }
   }
 }
 

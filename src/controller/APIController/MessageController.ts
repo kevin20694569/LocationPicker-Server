@@ -7,7 +7,11 @@ class MessageController extends ControllerBase {
     try {
       let room_id = req.params.id;
       let { date } = req.query;
-      var messages = await this.mongodbMessageService.getRoomMessage(room_id, date, 20);
+      let dateObject = new Date();
+      if (date) {
+        dateObject = new Date(date as string);
+      }
+      var messages = await this.mongodbMessageService.getRoomMessage(room_id, dateObject, 20);
       if (messages.length < 1) {
         res.json([]);
         res.status(200);
@@ -32,8 +36,12 @@ class MessageController extends ControllerBase {
       let num_User_ids = user_ids.map((id) => {
         return parseInt(id);
       });
+      let dateObject = new Date();
+      if (date) {
+        dateObject = new Date(date as string);
+      }
       let chatroom = await this.mongodbChatRoomService.getRoomByUserEachids(num_User_ids);
-      var messages = await this.mongodbMessageService.getRoomMessage(chatroom.room_id, date, 20);
+      var messages = await this.mongodbMessageService.getRoomMessage(chatroom.room_id, dateObject, 20);
       if (messages.length < 1) {
         res.json([]);
         res.status(200);

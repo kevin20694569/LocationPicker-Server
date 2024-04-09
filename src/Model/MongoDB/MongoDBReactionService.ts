@@ -6,10 +6,10 @@ class MongoDBReactionService {
   protected reactionProject = ReactionProjectOutput;
   protected mongoDBPostService = new MongoDBPostService();
 
-  async getPostReactions(post_id: string, selfUser_id: number, user_ids: number[]) {
+  async getPostReactions(post_id: string, selfUser_id: number, user_ids: number[], date: Date) {
     let results = await this.reactionModel.aggregate([
       {
-        $match: { post_id: post_id },
+        $match: { post_id: post_id, updated_at: { $lt: date } },
       },
       {
         $addFields: {
@@ -43,6 +43,9 @@ class MongoDBReactionService {
         $sort: { isFriend: -1, updated_at: -1 }, // 根据 isFriend 字段进行排序，朋友的排在最前面
       },
       {
+        $limit: 15,
+      },
+      {
         $match: { user_id: { $ne: selfUser_id } },
       },
       {
@@ -66,34 +69,6 @@ class MongoDBReactionService {
       {
         $match: { post_id: { $in: post_ids }, user_id: { $ne: Number(selfUser_id) } },
       },
-      /* {
-        $addFields: {
-          isFriend: { $in: ["$user_id", friend_ids] },
-          reaction: {
-            $function: {
-              body: function (reaction) {
-                // 内联的 JavaScript 函数，将整数值转换为字符串
-                switch (reaction) {
-                  case 0:
-                    return "love";
-                  case 1:
-                    return "vomit";
-                  case 2:
-                    return "angry";
-                  case 3:
-                    return "sad";
-                  case 4:
-                    return "surprise";
-                  default:
-                    return null;
-                }
-              },
-              args: ["$reaction"], // 函数参数
-              lang: "js",
-            },
-          },
-        },
-      },*/
       {
         $group: {
           _id: "$post_id",
@@ -131,33 +106,6 @@ class MongoDBReactionService {
           user_id: request_user_id,
         },
       },
-      /* {
-        $addFields: {
-          reaction: {
-            $function: {
-              body: function (reaction) {
-                // 内联的 JavaScript 函数，将整数值转换为字符串
-                switch (reaction) {
-                  case 0:
-                    return "love";
-                  case 1:
-                    return "vomit";
-                  case 2:
-                    return "angry";
-                  case 3:
-                    return "sad";
-                  case 4:
-                    return "surprise";
-                  default:
-                    return null;
-                }
-              },
-              args: ["$reaction"], // 函数参数
-              lang: "js",
-            },
-          },
-        },
-      },*/
     ]);
 
     return reactions;

@@ -54,13 +54,8 @@ class MongoDBMessageService {
     }
   }
 
-  async getRoomMessage(room_id, date, limit) {
+  async getRoomMessage(room_id: string, date: Date, limit: number) {
     try {
-      if (!date) {
-        date = new Date();
-      } else {
-        date = new Date(date);
-      }
       let results = await this.messageModel
         .find({
           room_id: room_id,

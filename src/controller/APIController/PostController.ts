@@ -42,10 +42,6 @@ class PostController extends ControllerBase {
 
   protected postMediaFolderString = "/public/media";
 
-  constructor() {
-    super();
-  }
-
   public async getNearLocationPostsWithPublic(req: Request, res: Response, next: NextFunction) {
     let { latitude, longitude, distance, user_id } = req.query;
     try {
@@ -73,8 +69,12 @@ class PostController extends ControllerBase {
     try {
       let restaurant_id = req.params.id;
       let { date, user_id } = req.query;
-      let posts = await this.mongodbPostService.getRestaurantPostsFromRestaurantID(restaurant_id, date);
-      let json = await this.mergeDataFromPosts(posts, user_id);
+      let dateObject = new Date();
+      if (date) {
+        dateObject = new Date(date);
+      }
+      let posts = await this.mongodbPostService.getRestaurantPostsFromRestaurantID(restaurant_id, dateObject);
+      let json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
 
       res.json(json);
       res.status(200);
@@ -102,8 +102,7 @@ class PostController extends ControllerBase {
         parseFloat(longitude)
       );
       let json = {};
-      json = await this.mergeDataFromPosts(posts, user_id);
-
+      json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
       res.json(json);
       res.status(200);
       res.end();
@@ -119,14 +118,17 @@ class PostController extends ControllerBase {
     try {
       let friend_user_id = req.params.id;
       let { longitude, latitude, date, user_id } = req.query;
-
+      let dateObject = new Date();
+      if (date) {
+        dateObject = new Date(date);
+      }
       let results = await this.neo4jFriendShipService.searchFriendsByUserID(friend_user_id);
 
       const frined_Ids = results.map((result) => {
         return parseInt(result.friend.user_ID);
       });
-      let posts = await this.mongodbPostService.getFriendsPostByCreatedTime(frined_Ids, date, parseFloat(longitude), parseFloat(latitude));
-      let json = await this.mergeDataFromPosts(posts, user_id);
+      let posts = await this.mongodbPostService.getFriendsPostByCreatedTime(frined_Ids, dateObject, parseFloat(longitude), parseFloat(latitude));
+      let json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
 
       res.json(json);
       res.status(200);
@@ -141,14 +143,15 @@ class PostController extends ControllerBase {
   public async getUserPosts(req, res: Response, next: NextFunction) {
     try {
       let id = req.params.id;
+      let user_id_number = parseInt(id as string);
       let { date, user_id } = req.query;
-      if (date == undefined || date == "" || date == null) {
-        date = new Date();
-      } else {
-        date = new Date(date);
+      let request_user_id_num = parseInt(user_id as string);
+      let dateObject = new Date();
+      if (date) {
+        dateObject = new Date(date);
       }
-      let posts = await this.mongodbPostService.getPostsByUserID(id, date);
-      let json = await this.mergeDataFromPosts(posts, user_id);
+      let posts = await this.mongodbPostService.getPostsByUserID(user_id_number, dateObject);
+      let json = await this.mergeDataFromPosts(posts, request_user_id_num);
       res.json(json);
       res.status(200);
       res.end();
@@ -162,7 +165,7 @@ class PostController extends ControllerBase {
       let id = req.params.id;
       let { request_user_id } = req.query;
       let posts = await this.mongodbPostService.getPostFromID(id);
-      let data = await this.mergeDataFromPosts(posts, request_user_id);
+      let data = await this.mergeDataFromPosts(posts, parseInt(request_user_id as string));
       let json = data[0];
       res.json(json);
     } catch (error) {
@@ -244,10 +247,12 @@ class PostController extends ControllerBase {
       if (posts.length == 0) {
         return [];
       }
-      let post_ids = [];
+      let post_ids: string[] = [];
       let users_ids: number[] = [];
       let restaurant_ids = posts.map((post) => {
-        post_ids.push(post.post_id);
+        let post_ObID: mongoose.Types.ObjectId = post.post_id;
+        let post_id = post_ObID.toHexString();
+        post_ids.push(post_id);
         users_ids.push(post.user_id);
         return post.restaurant_id;
       });

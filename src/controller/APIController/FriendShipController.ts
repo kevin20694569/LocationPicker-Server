@@ -5,6 +5,7 @@ import MySQLUsersTableService from "../../Model/MySQL/MySQLUsersTableService";
 import MongoDBReactionService from "../../Model/MongoDB/MongoDBReactionService";
 import Neo4jFriendShipService from "../../Model/Neo4j/Neo4jFriendShipService";
 import MySQLRestaurantsTableService from "../../Model/MySQL/MySQLRestaurantsTableService";
+import { Result } from "neo4j-driver";
 
 class FriendShipController extends ControllerBase {
   protected postMediaFolderString = this.serverIP + "/public/media";
@@ -55,16 +56,27 @@ class FriendShipController extends ControllerBase {
     try {
       let { request_user_id } = req.query;
       let results = await this.neo4jFriendShipService.searchFriendsByUserID(parseFloat(request_user_id as string));
+
       let ids = results.map((result) => {
         return parseInt(result.friend.user_ID);
       });
+      let friendShips = await this.neo4jFriendShipService.checkUsersAreFriend(parseInt(request_user_id as string), ids);
       let users = await this.mysqlUsersTableService.getUserByIDs(ids);
       let userMap: object = {};
+      let friendsMap: Object = {};
       users.forEach((user) => {
         userMap[user.user_id] = user;
       });
+      friendShips.forEach((friendShip) => {
+        friendsMap[friendShip["user"]["user_ID"]] = true;
+      });
       results.forEach((result) => {
-        result["user"] = userMap[result["friend"]["user_ID"]];
+        let user_id = result["friend"]["user_ID"];
+        result["user"] = userMap[user_id];
+        result["isFriend"] = false;
+        if (friendsMap[user_id]) {
+          result["isFriend"] = true;
+        }
       });
       res.json(results);
     } catch (error) {

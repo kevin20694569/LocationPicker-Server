@@ -1,5 +1,6 @@
 import "module-alias";
 import MySQLTableControllerBase from "./MySQLTableServiceBase";
+import { error } from "neo4j-driver";
 class MySQLUsersTableService extends MySQLTableControllerBase {
   protected serverUserImageIP = this.serverIP + "/userimage/";
   protected selectString: string = `CONCAT( "${this.serverUserImageIP}" , user_imageid) as user_imageurl, NULL AS user_password`;
@@ -17,24 +18,26 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
   async selectuserfromemail(email: String) {
     try {
       await this.getConnection();
-      let query = `SELECT user_email FROM users WHERE user_email = ?`;
+      let query = `SELECT user_email, user_password FROM users WHERE user_email = ?`;
       let params = [email];
       let results: any[];
       let fields: any;
       [results, fields] = await this.connection.query(query, params);
-
-      return [results, fields];
+      if (results.length < 1) {
+        throw new Error("沒有這個User");
+      }
+      return results[0];
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -52,7 +55,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
   async setUserPostsCount(user_id: Number, target: Number) {
@@ -69,7 +72,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -87,7 +90,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -105,7 +108,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -121,7 +124,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -139,7 +142,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -158,7 +161,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 }

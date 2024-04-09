@@ -59,7 +59,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       await this.deleteRestaurant(restaurant_ID);
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -112,7 +112,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -129,7 +129,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -146,7 +146,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -162,7 +162,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -184,7 +184,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
 
@@ -218,7 +218,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      await this.release();
+      this.release();
     }
   }
   async getAllTableRestaurants() {
@@ -232,7 +232,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      super.release();
+      this.release();
     }
   }
 

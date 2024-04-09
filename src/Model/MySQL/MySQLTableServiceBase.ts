@@ -19,7 +19,7 @@ abstract class MySQLTableControllerBase {
     });
   }
 
-  async release() {
+  release() {
     if (this.connection) {
       this.connection.release();
     }

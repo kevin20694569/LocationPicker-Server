@@ -95,7 +95,7 @@ class MongoDBPostService {
     }
   }
 
-  async getPostFromID(Post_ID) {
+  async getPostFromID(Post_ID: string) {
     try {
       let id = new mongoose.Types.ObjectId(Post_ID);
       const results = await this.postModel.aggregate([{ $match: { _id: id } }, { $project: this.standardPostProjectOutput }]);
@@ -109,14 +109,8 @@ class MongoDBPostService {
     }
   }
 
-  async getRestaurantPostsFromRestaurantID(Restaurant_ID: string, dateThreshold: string) {
+  async getRestaurantPostsFromRestaurantID(Restaurant_ID: string, date: Date) {
     try {
-      let date: Date;
-      if (dateThreshold == undefined || dateThreshold == "") {
-        date = new Date();
-      } else {
-        date = new Date(dateThreshold);
-      }
       const results = await this.postModel.aggregate([
         {
           $match: {
@@ -173,17 +167,13 @@ class MongoDBPostService {
     }
   }
 
-  async getPostsByUserID(user_id, dateThreshold) {
-    if (!dateThreshold) {
-      dateThreshold = new Date();
-    }
+  async getPostsByUserID(user_id: number, date: Date) {
     try {
-      user_id = parseInt(user_id);
       const results = await this.postModel.aggregate([
         {
           $match: {
             user_id: user_id,
-            created_at: { $lt: dateThreshold },
+            created_at: { $lt: date },
           },
         },
         { $project: this.standardPostProjectOutput },
@@ -195,14 +185,8 @@ class MongoDBPostService {
     }
   }
 
-  async getFriendsPostByCreatedTime(friend_Ids: number[], date: string, longtitude: number, latitude: number) {
+  async getFriendsPostByCreatedTime(friend_Ids: number[], date: Date, longtitude: number, latitude: number) {
     try {
-      let gt_date: Date;
-      if (date == undefined || date == "") {
-        gt_date = new Date();
-      } else {
-        gt_date = new Date(date);
-      }
       let match: PipelineStage[] = [
         {
           $geoNear: {
@@ -214,7 +198,7 @@ class MongoDBPostService {
         {
           $match: {
             user_id: { $in: friend_Ids },
-            created_at: { $lt: gt_date },
+            created_at: { $lt: date },
           },
         },
         { $project: this.standardPostProjectOutput },

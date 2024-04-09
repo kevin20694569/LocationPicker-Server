@@ -37,7 +37,9 @@ class FriendRequestController extends ControllerBase {
   async sendFriendRequst(req: Request, res: Response, next: NextFunction) {
     try {
       let { request_user_id, to_user_id } = req.body;
-      let results = await this.neo4jFriendShipService.sendFriendRequest(request_user_id, to_user_id);
+      let request_user_id_num = parseInt(request_user_id);
+      let to_user_id_num = parseInt(to_user_id);
+      let results = await this.neo4jFriendShipService.sendFriendRequest(request_user_id_num, to_user_id_num);
       res.json(results[0]);
     } catch (error) {
       res.status(404).send(error.message);

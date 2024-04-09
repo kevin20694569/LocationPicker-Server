@@ -58,7 +58,7 @@ class Refactor {
   }
 
   async updateRestaurantPostsCount(id) {
-    let posts = await this.mongoDBPostService.getRestaurantPostsFromRestaurantID(id, "");
+    let posts = await this.mongoDBPostService.getRestaurantPostsFromRestaurantID(id, new Date());
     await this.restaurantTableService.updateRestaurantPostsCount(id, posts.length);
   }
   async averagePlaceAverage() {
@@ -104,7 +104,7 @@ class Refactor {
   }
 
   async updateUserPostsCount(user_id) {
-    let posts = await this.mongoDBPostService.getPostsByUserID(user_id, "");
+    let posts = await this.mongoDBPostService.getPostsByUserID(user_id, new Date());
     await this.userTableService.setUserPostsCount(user_id, posts.length);
   }
 

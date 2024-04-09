@@ -1,5 +1,5 @@
 import driver from "./Neo4jDBDriver";
-import { session, QueryResult, Session } from "neo4j-driver";
+import { session, QueryResult, Session, Result } from "neo4j-driver";
 
 class Neo4jFriendShipService {
   driver: typeof driver = driver;
@@ -34,6 +34,7 @@ class Neo4jFriendShipService {
 
   async sendFriendRequest(from_user_id: Number, to_user_id: Number) {
     try {
+      console.log(from_user_id, to_user_id);
       if (from_user_id == to_user_id) {
         throw new Error("不得寄好友邀請給自己");
       }
@@ -54,6 +55,7 @@ class Neo4jFriendShipService {
         from_user_id,
         to_user_id,
       });
+      console.log(results.records);
       if (results.records.length <= 0) {
         throw new Error("寄送邀請失敗");
       }
@@ -116,6 +118,23 @@ class Neo4jFriendShipService {
     }
   }
 
+  async checkUsersAreFriend(from_user_id: Number, to_user_id_Array: Number[]) {
+    try {
+      let query = `
+        MATCH (fromU:User)-[*1]-(friendship:Friendship)-[*1]-(user:User)
+        WHERE fromU.user_ID = $from_user_id AND user.user_ID IN $to_user_id_Array
+        RETURN user
+      `;
+      let results = await this.session.run(query, { from_user_id, to_user_id_Array });
+      let json = this.transFormToJSONNeo4jResults(results);
+      return json;
+    } catch (error) {
+      throw error;
+    } finally {
+      this.close();
+    }
+  }
+
   async checkIsFriend(from_user_id: Number, to_user_id: Number) {
     try {
       let query = `
@@ -125,8 +144,6 @@ class Neo4jFriendShipService {
       `;
       let results = await this.session.run(query, { from_user_id, to_user_id });
       return results.records.length != 0;
-      let objects = this.transFormToJSONNeo4jResults(results);
-      return objects.length != 0;
     } catch (error) {
       throw error;
     } finally {
@@ -222,14 +239,12 @@ class Neo4jFriendShipService {
     try {
       let results = searchResults.records.map((record) => {
         let json: any = {};
-
         let keys = record["keys"];
         keys.forEach((key) => {
           var result = record.get(String(key));
           let id = (result.identity.high << 32) + result.identity.low;
-
           json[key] = result.properties;
-          json[key][String(key) + "_ID"] = id;
+          json[key]["_id"] = id;
         });
         return json;
       });

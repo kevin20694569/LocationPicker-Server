@@ -11,6 +11,7 @@
     "@mysql": "dist/Model/MYSQL"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/multer": "^1.4.11",
     "axios": "^1.5.1",
     "bcrypt": "^5.1.1",

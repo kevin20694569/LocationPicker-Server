@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import ControllerBase from "../ControllerBase";
+
 import { ResultSummary, error } from "neo4j-driver";
 
 class ChatRoomController extends ControllerBase {
-  async getChatRoomsPreviews(req, res: Response, next: NextFunction) {
+  async getChatRoomsPreviews(req: Request, res: Response, next: NextFunction) {
     try {
       let request_user_id = req.params.id;
       let { room_idsToExclude } = req.body;
@@ -11,12 +12,16 @@ class ChatRoomController extends ControllerBase {
       if (!room_idsToExclude) {
         room_idsToExclude = [];
       }
-      let results = await this.mongodbChatRoomService.getPreviewsByUserId(parseInt(request_user_id), date, room_idsToExclude);
+      let dateObject: Date = new Date();
+      if (date) {
+        dateObject = new Date(date as string);
+      }
+      let results = await this.mongodbChatRoomService.getPreviewsByUserId(parseInt(request_user_id), dateObject, room_idsToExclude);
       if (results.length == 0) {
         res.json();
         return;
       }
-      let room_ids = [];
+      let room_ids: string[] = [];
       let user_ids = results.map((result) => {
         room_ids.push(result.room_id);
         let array = result.room_id.split("_");
@@ -29,7 +34,7 @@ class ChatRoomController extends ControllerBase {
         }
       });
       let users = await this.mysqlUsersTableService.getUserByIDs(user_ids);
-      let usersMap = {};
+      let usersMap: { [key: string]: any } = {};
       users.forEach((user) => {
         usersMap[user.user_id] = user;
       });
@@ -50,7 +55,7 @@ class ChatRoomController extends ControllerBase {
       });
       results["responded_room_ids"] = room_ids;
       res.json(results);
-    } catch (error) {
+    } catch (error: any) {
       res.status(404).send(error.message);
       console.log(error);
     } finally {
@@ -78,7 +83,7 @@ class ChatRoomController extends ControllerBase {
         message: result,
         user: user,
       });
-    } catch (error) {
+    } catch (error: any) {
       res.status(404).send(error.message);
       console.log(error);
     } finally {
