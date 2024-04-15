@@ -22,6 +22,7 @@ abstract class MySQLTableControllerBase {
   release() {
     if (this.connection) {
       this.connection.release();
+      this.pool.releaseConnection(this.connection);
     }
   }
   async getConnection() {

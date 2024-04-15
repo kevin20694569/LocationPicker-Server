@@ -1,45 +1,10 @@
 import { Request, Response, NextFunction, query, request } from "express";
 import ControllerBase from "../ControllerBase";
-import shortUUID from "short-uuid";
-import multer, { Multer, diskStorage, StorageEngine, FileFilterCallback } from "multer";
 import fs from "fs";
-import path from "path";
 import "dotenv/config";
 import mongoose from "mongoose";
 
 class PostController extends ControllerBase {
-  protected storage: StorageEngine = diskStorage({
-    destination: function (req: Request, file: Express.Multer.File, cb) {
-      const postMediaFolder = path.resolve(__dirname, "../../../public/media/postmedia");
-      cb(null, postMediaFolder);
-    },
-    filename: function (req, file: Express.Multer.File, cb) {
-      const uuid = shortUUID.uuid();
-      const mimeType = file.mimetype;
-      let ext = "";
-      if (mimeType.startsWith("image/")) {
-        ext = ".jpg";
-      } else if (mimeType.startsWith("video/")) {
-        ext = ".mp4";
-      }
-      cb(null, uuid + ext);
-    },
-  });
-  protected upload: Multer = multer({
-    storage: this.storage,
-    limits: {
-      fileSize: 100 * 1024 * 1024, // 限制 100 MB
-    },
-    fileFilter(req: Request, file: Express.Multer.File, callback) {
-      if (!file.mimetype.match(/^image|video\//)) {
-        console.log("檔案格式錯誤");
-        callback(new Error("檔案格式錯誤"));
-      } else {
-        callback(null, true);
-      }
-    },
-  });
-
   protected postMediaFolderString = "/public/media";
 
   public async getNearLocationPostsWithPublic(req: Request, res: Response, next: NextFunction) {
@@ -87,14 +52,18 @@ class PostController extends ControllerBase {
   }
 
   public async getNearLocationPostsWithFriends(req, res: Response, next: NextFunction) {
-    let user_id = req.params.id;
-    let { latitude, longitude, distance } = req.query;
+    let { latitude, longitude, distance, request_user_id } = req.query;
+    if (!distance) {
+      distance = 0;
+    }
     try {
+      let user_id = parseInt(request_user_id as string);
       let friendResults = await this.neo4jFriendShipService.searchFriendsByUserID(user_id);
 
       let friend_ID_Array = friendResults.map((friend) => {
         return Number(friend.friend.user_ID);
       });
+
       let posts = await this.mongodbPostService.getNearLocationPostsFromFriendsByUserID(
         friend_ID_Array,
         parseFloat(distance),
@@ -102,7 +71,7 @@ class PostController extends ControllerBase {
         parseFloat(longitude)
       );
       let json = {};
-      json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
+      json = await this.mergeDataFromPosts(posts, user_id);
       res.json(json);
       res.status(200);
       res.end();
@@ -116,19 +85,21 @@ class PostController extends ControllerBase {
 
   public async getFriendsPostsOrderByTime(req, res: Response, next: NextFunction) {
     try {
-      let friend_user_id = req.params.id;
-      let { longitude, latitude, date, user_id } = req.query;
+      let { latitude, longitude, date, request_user_id } = req.query;
+
+      let user_id = parseInt(request_user_id as string);
+
       let dateObject = new Date();
       if (date) {
         dateObject = new Date(date);
       }
-      let results = await this.neo4jFriendShipService.searchFriendsByUserID(friend_user_id);
+      let results = await this.neo4jFriendShipService.searchFriendsByUserID(user_id);
 
       const frined_Ids = results.map((result) => {
         return parseInt(result.friend.user_ID);
       });
       let posts = await this.mongodbPostService.getFriendsPostByCreatedTime(frined_Ids, dateObject, parseFloat(longitude), parseFloat(latitude));
-      let json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
+      let json = await this.mergeDataFromPosts(posts, user_id);
 
       res.json(json);
       res.status(200);
@@ -178,7 +149,7 @@ class PostController extends ControllerBase {
 
   public async uploadPost(req, res: Response, next: NextFunction) {
     try {
-      let { user_id, post_title, post_content, restaurant_address, post_itemtitles, restaurant_name, restaurant_ID, grade, socket_id } = req.json;
+      let { user_id, post_title, post_content, post_itemtitles, restaurant_ID, grade, socket_id } = req.json;
       let { restaurant_id, restaurant_latitude, restaurant_longitude } = await this.mysqlRestaurantsTableService.findRestaurantID(
         restaurant_ID,
         grade

@@ -10,6 +10,7 @@ import MongoDBBusiness_TimeService from "../Model/MongoDB/MongoDBBusinessTimeSer
 import MongoDBChatRoomService from "../Model/MongoDB/MongoDBChatRoomService";
 import MongoDBMessageService from "../Model/MongoDB/MongoDBMessageService";
 import MongoDBUserService from "../Model/MongoDB/MongoDBUserService";
+import UploadMediaController from "./ResourceController/UploadMediaController";
 
 abstract class ControllerBase {
   protected mysqlUsersTableService: MySQLUsersTableService = new MySQLUsersTableService();
@@ -23,6 +24,8 @@ abstract class ControllerBase {
   protected mongodbChatRoomService: MongoDBChatRoomService = new MongoDBChatRoomService();
   protected mongodbMessageService: MongoDBMessageService = new MongoDBMessageService();
   protected neo4jFriendShipService: Neo4jFriendShipService = new Neo4jFriendShipService();
+
+  protected uploadMediaController: UploadMediaController = new UploadMediaController();
 
   protected serverIP?: string = process.env.ServerIP;
 }

@@ -13,7 +13,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       await this.getConnection();
       let query = `INSERT INTO users (user_name, user_imageid, user_email, user_password) VALUES (?, ?, ?, ?)`;
       let params = [username, imageid, email, hashPassword];
-      let [header, fields] = await this.connection.query(query, params);
+      let [header, fields] = await this.pool.query(query, params);
       return [header, fields];
     } catch (error) {
       throw error;
@@ -29,7 +29,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       let params = [email];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       if (results.length < 1) {
         throw new Error("沒有這個User");
       }
@@ -48,7 +48,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       let userparams = [plusInt, user_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(userquery, userparams);
+      [results, fields] = await this.pool.query(userquery, userparams);
       let user = results[0];
 
       return user;
@@ -58,15 +58,16 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       this.release();
     }
   }
-  async setUserPostsCount(user_id: Number, target: Number) {
+  async setUserPostsCount(user_id: number, target: number) {
     try {
-      await this.getConnection();
+      // await this.getConnection();
+
       let userquery = "update users set posts_count = ? where user_id = ?;";
 
       let userparams = [target, user_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(userquery, userparams);
+      [results, fields] = await this.pool.query(userquery, userparams);
       let user = results[0];
       return user;
     } catch (error) {
@@ -78,13 +79,13 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
 
   async setUserFriendsCount(user_id: Number, target: Number) {
     try {
-      await this.getConnection();
+      //   await this.getConnection();
       let userquery = "update users set friends_count = ? where user_id = ?;";
 
       let userparams = [target, user_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(userquery, userparams);
+      [results, fields] = await this.pool.query(userquery, userparams);
       let user = results[0];
       return user;
     } catch (error) {
@@ -94,17 +95,66 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
     }
   }
 
-  async updateUserFriendsCount(user_id: Number, plusInt: number) {
+  async updateUserFriendsCount(user_id: number, plusInt: number) {
     try {
       await this.getConnection();
       let userquery = "update users set friends_count = friends_count + ? where user_id = ?;";
       let userparams = [plusInt, user_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(userquery, userparams);
+      [results, fields] = await this.pool.query(userquery, userparams);
       let user = results[0];
 
       return user;
+    } catch (error) {
+      throw error;
+    } finally {
+      this.release();
+    }
+  }
+
+  async updateUserDetail(user_id: number, name?: null, email?: null, password?: null, imageID?: string) {
+    try {
+      await this.getConnection();
+      let userquery = "UPDATE users SET ";
+      let userparams = [];
+
+      if (name !== null && name !== undefined) {
+        if (userparams.length > 0) {
+          userquery += ", ";
+        }
+        userquery += "user_name = ?";
+        userparams.push(name);
+      }
+
+      if (email !== null && email !== undefined) {
+        if (userparams.length > 0) {
+          userquery += ", ";
+        }
+        userquery += "user_email = ?";
+        userparams.push(email);
+      }
+
+      if (password !== null && password !== undefined) {
+        if (userparams.length > 0) {
+          userquery += ", ";
+        }
+        userquery += "user_password = ?";
+        userparams.push(password);
+      }
+      if (imageID !== null && imageID !== undefined) {
+        if (userparams.length > 0) {
+          userquery += ", ";
+        }
+        userquery += "user_imageid = ?";
+        userparams.push(imageID);
+      }
+      userquery += " where user_id = ?;";
+      userparams.push(user_id);
+
+      let results: any[];
+      let fields: any;
+      [results, fields] = await this.pool.query(userquery, userparams);
     } catch (error) {
       throw error;
     } finally {
@@ -119,7 +169,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       var params = [];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       return results;
     } catch (error) {
       throw error;
@@ -135,9 +185,8 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       let userParams = [user_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(userquery, userParams);
+      [results, fields] = await this.pool.query(userquery, userParams);
       let user = results[0];
-
       return user;
     } catch (error) {
       throw error;
@@ -156,7 +205,7 @@ class MySQLUsersTableService extends MySQLTableControllerBase {
       var params = [user_ids];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       return results;
     } catch (error) {
       throw error;

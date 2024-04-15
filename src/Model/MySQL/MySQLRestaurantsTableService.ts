@@ -19,7 +19,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let params = [restaurant_ID];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
 
       let restaurantDetail;
       if (results.length < 1) {
@@ -71,7 +71,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     let params = [input_grade, restaurant_id];
     let results: any[];
     let fields: any;
-    [results, fields] = await this.connection.query(query, params);
+    [results, fields] = await this.pool.query(query, params);
   }
 
   async updateRestaurantPostsCountWithInput(restaurant_id: String, increaseCount: Number) {
@@ -79,7 +79,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     let params = [increaseCount, restaurant_id];
     let results: any[];
     let fields: any;
-    [results, fields] = await this.connection.query(query, params);
+    [results, fields] = await this.pool.query(query, params);
   }
 
   async updateRestaurantPostsCount(restaurant_id: String, posts_count: Number) {
@@ -87,7 +87,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     let params = [posts_count, restaurant_id];
     let results: any[];
     let fields: any;
-    [results, fields] = await this.connection.query(query, params);
+    [results, fields] = await this.pool.query(query, params);
     if (results.length < 1) {
       throw new Error("updateRestaurantPostsCount錯誤");
     }
@@ -101,7 +101,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       var params = [lng ?? 0, lat ?? 0, restaurant_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       let restaurant = results[0];
       this.translateBool(restaurant);
       if (results.length > 0) {
@@ -125,7 +125,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let results: any[];
       let fields: any;
 
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
     } catch (error) {
       throw error;
     } finally {
@@ -141,7 +141,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let results: any[];
       let fields: any;
       let params = [place_id, name, formatted_address, lat, lng, grade, 1, takeout, reservable, price_level, website, formatted_phone_number];
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       return [results, fields];
     } catch (error) {
       throw error;
@@ -157,7 +157,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let params = [place_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       return [results, fields];
     } catch (error) {
       throw error;
@@ -176,7 +176,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let params = [restaurant_Ids];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       results.forEach((restaurant) => {
         this.translateBool(restaurant);
       });
@@ -209,6 +209,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       }
       let results: any[];
       let fields: any;
+
       [results, fields] = await this.connection.query(query, params);
 
       for (const value of results) {
@@ -218,6 +219,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
+      this.pool.releaseConnection(this.connection);
       this.release();
     }
   }
@@ -227,7 +229,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let query = `select * from restaurants;`;
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query);
+      [results, fields] = await this.pool.query(query);
       return results;
     } catch (error) {
       throw error;
@@ -243,7 +245,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let params = [averge_grade, restaurant_id];
       let results: any[];
       let fields: any;
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
       return results;
     } catch (error) {
       throw error;

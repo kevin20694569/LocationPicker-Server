@@ -20,9 +20,6 @@ class FriendRoute extends RouteBase {
     this.router.use("/friendships", (req, res, next) => {
       this.friendShipRoute.router(req, res, next);
     });
-    this.router.get("/", (req, res, next) => {
-      this.friendShipController.getUserFriends(req, res, next);
-    });
   }
 }
 

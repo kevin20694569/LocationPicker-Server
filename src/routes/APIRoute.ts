@@ -8,6 +8,7 @@ import ChatRoomRoute from "./ChatRoomRoute/ChatRoomRoute";
 import "dotenv/config";
 import jwt from "jsonwebtoken";
 import UserAccountRoute from "./UserAccountRoute/UserAccountRoute";
+import Refactor from "../refactor/RestaurantRefactor";
 
 class ApiRoute extends RouteBase {
   private jwtKey: string = process.env.jwtKey;
@@ -18,6 +19,7 @@ class ApiRoute extends RouteBase {
   protected friendRoute: FriendRoute = new FriendRoute();
   protected chatroomRoute: ChatRoomRoute = new ChatRoomRoute();
   protected userAccountRoute: UserAccountRoute = new UserAccountRoute();
+  protected refactor: Refactor = new Refactor(process.env.DB_Password);
 
   protected registerRoute() {
     this.router.use("/useraccount", (req, res, next) => {
@@ -43,6 +45,11 @@ class ApiRoute extends RouteBase {
     });
     this.router.use("/chatrooms", (req, res, next) => {
       this.chatroomRoute.router(req, res, next);
+    });
+    this.router.post("/refact", async (req, res, next) => {
+      await this.refactor.standardPlace();
+      await this.refactor.standardUser();
+      res.end();
     });
     this.router.use("/", (err, req, res, next) => {
       res.end();

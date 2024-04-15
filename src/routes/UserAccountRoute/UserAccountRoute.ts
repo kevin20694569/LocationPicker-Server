@@ -10,6 +10,9 @@ class UserAccountRoute extends RouteBase {
     this.router.post("/register", (req, res, next) => {
       this.userAccountController.register(req, res, next);
     });
+    this.router.put("/:id", (req, res, next) => {
+      this.userAccountController.updateUserAccountDetail(req, res, next);
+    });
   }
 }
 

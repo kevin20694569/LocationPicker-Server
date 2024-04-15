@@ -7,11 +7,10 @@ import MongoDBPostService from "../Model/MongoDB/MongoDBPostService";
 import MongoDB from "../Model/MongoDB/MongoDB";
 import Neo4jFriendShipService from "../Model/Neo4j/Neo4jFriendShipService";
 import "dotenv/config";
-const MySQLDBPassword: string = process.env.DB_Password;
 class Refactor {
   sqlDBPassword: string;
-  restaurantTableService;
-  userTableService;
+  restaurantTableService: MySQLRestaurantsTableService;
+  userTableService: MySQLUsersTableService;
   googleMapAPIService = new GoogleMapAPIService();
   mongoDBBusiness_TimeService = new MongoDBBusiness_TimeService();
   socketIOSingletonService = new SocketIOSingletonController();
@@ -19,13 +18,13 @@ class Refactor {
   neo4jFriendShipService = new Neo4jFriendShipService();
   mongoDBConnection = MongoDB;
   constructor(sqlDBPassword: string) {
-    this.mongoDBConnection.connectToMongoDB();
     this.sqlDBPassword = sqlDBPassword;
     this.restaurantTableService = new MySQLRestaurantsTableService(sqlDBPassword);
     this.userTableService = new MySQLUsersTableService(sqlDBPassword);
   }
   async standardPlace() {
     try {
+      this.mongoDBConnection.connectToMongoDB();
       let results = await this.restaurantTableService.getAllTableRestaurants();
       let place_ids = results.map((place) => {
         return place.restaurant_id;
@@ -47,8 +46,28 @@ class Refactor {
       console.log(`總共正規${newInit}個Place`);
     } catch (error) {
       console.log(error);
-    } finally {
-      await this.mongoDBConnection.disconnect();
+    }
+  }
+
+  async standardUser(user_id?: number) {
+    try {
+      let results;
+      if (user_id == null) {
+        results = await this.userTableService.getAllUsers();
+      } else {
+        results = [{ user_id: user_id }];
+      }
+      let newInit = 0;
+      for (let i = 0; i < results.length; i++) {
+        let id = results[i].user_id;
+        await this.updateUserPostsCount(id);
+        await this.updateUserFriendsCount(id);
+        newInit += 1;
+        console.log(`${id}正規完成`);
+      }
+      console.log(`總共正規${newInit}個Place`);
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -74,32 +93,6 @@ class Refactor {
       console.log(`總共計算${newInit}個Place平均分數`);
     } catch (error) {
       console.log(error);
-    } finally {
-      await this.mongoDBConnection.disconnect();
-    }
-  }
-
-  async standardUser(user_id?: number) {
-    try {
-      let results;
-      if (user_id == null) {
-        results = await this.userTableService.getAllUsers();
-      } else {
-        results = [{ user_id: user_id }];
-      }
-      let newInit = 0;
-      for (let i = 0; i < results.length; i++) {
-        let id = results[i].user_id;
-        await this.updateUserPostsCount(id);
-        await this.updateUserFriendsCount(id);
-        newInit += 1;
-        console.log(`${id}正規完成`);
-      }
-      console.log(`總共正規${newInit}個Place`);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      await this.mongoDBConnection.disconnect();
     }
   }
 
@@ -113,7 +106,6 @@ class Refactor {
     await this.userTableService.setUserFriendsCount(user_id, friends.length);
   }
 }
-let refactor = new Refactor(MySQLDBPassword);
+export default Refactor;
 
-refactor.standardUser();
 //refactor.standardPlace();

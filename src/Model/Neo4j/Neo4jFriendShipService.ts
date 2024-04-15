@@ -1,3 +1,4 @@
+import { JsonWebTokenError } from "jsonwebtoken";
 import driver from "./Neo4jDBDriver";
 import { session, QueryResult, Session, Result } from "neo4j-driver";
 
@@ -55,7 +56,6 @@ class Neo4jFriendShipService {
         from_user_id,
         to_user_id,
       });
-      console.log(results.records);
       if (results.records.length <= 0) {
         throw new Error("寄送邀請失敗");
       }
@@ -99,15 +99,49 @@ class Neo4jFriendShipService {
     }
   }
 
-  async searchFriendsByUserID(user_id: number): Promise<any[]> {
+  async acceptToCreateFriendshipByEachUserID(accept_user_id: Number, sent_user_id: Number) {
     try {
+      console.log(accept_user_id, sent_user_id);
       let query = `
-        MATCH (u:User)-[*1]-(friendship:Friendship)-[*1]-(friend:User)
-        WHERE u.user_ID = $user_id
-        RETURN  friendship, friend
+      MATCH (user1:User { user_ID: $sent_user_id }), (user2:User { user_ID: $accept_user_id })
+      WHERE NOT EXISTS((user1)-[:USER1]-(:Friendship)-[:USER2]-(user2))
+      AND NOT EXISTS((user2)-[:USER2]-(:Friendship)-[:USER1]-(user1))
+      OPTIONAL MATCH (user1)-[:SENT_FRIEND_REQUEST]->(request:FriendRequest)-[:TO_USER]->(user2)
+      WITH user1, user2, request
+      WHERE request IS NOT NULL
+      CREATE (user1)-[:USER1]->(friendship:Friendship {friendship_time: apoc.date.toISO8601(datetime().epochMillis, "ms")})-[:USER2]->(user2)
+      DETACH DELETE request
+      RETURN friendship;
       `;
-      let results = await this.session.run(query, { user_id });
+      let results = await this.session.run(query, {
+        sent_user_id,
+        accept_user_id,
+      });
 
+      if (results.records.length <= 0) {
+        throw new Error("接受邀請失敗");
+      }
+      let objects = this.transFormToJSONNeo4jResults(results);
+      return objects;
+    } catch (error) {
+      throw error;
+    } finally {
+      this.close();
+    }
+  }
+
+  async searchFriendsByUserID(user_id: number, excluded_user_id?: number): Promise<any[]> {
+    try {
+      if (!excluded_user_id) {
+        excluded_user_id = null;
+      }
+      let query = `
+      MATCH (u:User)-[*1]-(friendship:Friendship)-[*1]-(friend:User)
+      WHERE u.user_ID = $user_id
+      AND ($excluded_user_id IS NULL OR friend.user_ID <> $excluded_user_id)
+      RETURN friendship, friend
+      `;
+      let results = await this.session.run(query, { user_id, excluded_user_id });
       let objects = this.transFormToJSONNeo4jResults(results);
       return objects;
     } catch (error) {
@@ -118,32 +152,37 @@ class Neo4jFriendShipService {
     }
   }
 
+  // 29 49 friendship
+  // 29 -> 8 friendReqeust
+  // 30 -> 29 friendrequest
+  // not friend
+
   async checkUsersAreFriend(from_user_id: Number, to_user_id_Array: Number[]) {
     try {
       let query = `
-        MATCH (fromU:User)-[*1]-(friendship:Friendship)-[*1]-(user:User)
-        WHERE fromU.user_ID = $from_user_id AND user.user_ID IN $to_user_id_Array
-        RETURN user
+      MATCH (fromUser:User)-[*1]-(friendship:Friendship)-[*1]-(toUser:User)
+      WHERE fromUser.user_ID = $from_user_id AND toUser.user_ID IN $to_user_id_Array
+      RETURN toUser AS user, friendship AS friendship, null AS request, null AS requestSender, null AS receiveRequestUser
+          
+      UNION
+            
+      MATCH (fromUser:User)-[*1]->(request:FriendRequest)-[*1]->(toUser:User)
+      WHERE fromUser.user_ID = $from_user_id AND toUser.user_ID IN $to_user_id_Array 
+      RETURN toUser AS user, null AS friendship, request AS request, null AS requestSender, toUser AS receiveRequestUser
+      
+      UNION
+      
+      MATCH (fromUser:User)-[*1]->(request:FriendRequest)-[*1]->(toUser:User)
+      WHERE fromUser.user_ID IN $to_user_id_Array AND toUser.user_ID = $from_user_id
+      RETURN fromUser AS user, null AS friendship, request AS request, fromUser AS requestSender, null AS receiveRequestUser
+      ORDER BY 
+      CASE WHEN requestSender IS NOT NULL THEN 0 ELSE 1 END, 
+      CASE WHEN receiveRequestUser IS NOT NULL THEN 0 ELSE 1 END, 
+      CASE WHEN friendship IS NOT NULL THEN 0 ELSE 1 END
       `;
       let results = await this.session.run(query, { from_user_id, to_user_id_Array });
       let json = this.transFormToJSONNeo4jResults(results);
       return json;
-    } catch (error) {
-      throw error;
-    } finally {
-      this.close();
-    }
-  }
-
-  async checkIsFriend(from_user_id: Number, to_user_id: Number) {
-    try {
-      let query = `
-        MATCH (fromU:User)-[*1]-(friendship:Friendship)-[*1]-(toU:User)
-        WHERE fromU.user_ID = $from_user_id AND toU.user_ID = $to_user_id
-        RETURN friendship
-      `;
-      let results = await this.session.run(query, { from_user_id, to_user_id });
-      return results.records.length != 0;
     } catch (error) {
       throw error;
     } finally {
@@ -240,12 +279,15 @@ class Neo4jFriendShipService {
       let results = searchResults.records.map((record) => {
         let json: any = {};
         let keys = record["keys"];
-        keys.forEach((key) => {
-          var result = record.get(String(key));
-          let id = (result.identity.high << 32) + result.identity.low;
-          json[key] = result.properties;
-          json[key]["_id"] = id;
-        });
+        for (const key of keys) {
+          var result = record.get(key);
+          if (result) {
+            if (result.properties) {
+              json[key] = result.properties;
+              continue;
+            }
+          }
+        }
         return json;
       });
       return results;

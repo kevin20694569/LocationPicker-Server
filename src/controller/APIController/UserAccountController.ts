@@ -3,6 +3,7 @@ import ControllerBase from "../ControllerBase";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import multer from "multer";
 class UserAccountController extends ControllerBase {
   private key = process.env.jwtKey;
   async login(req: Request, res: Response, next: NextFunction) {
@@ -49,6 +50,21 @@ class UserAccountController extends ControllerBase {
     } catch (error) {
       console.log(error.message);
       res.send(error.message);
+    } finally {
+      res.end();
+    }
+  }
+
+  async updateUserAccountDetail(req: Request, res: Response, next: NextFunction) {
+    try {
+      const user_id = parseInt(req.params.id);
+      let fileName = await this.uploadMediaController.uploadUserImage(req, res, next);
+      const { name, email, password } = JSON.parse(req.body.json);
+      await this.mysqlUsersTableService.updateUserDetail(user_id, name, email, password, fileName);
+      res.status(200);
+    } catch (error) {
+      res.status(400);
+      res.send(error);
     } finally {
       res.end();
     }

@@ -7,6 +7,7 @@ class UserController extends ControllerBase {
     let id = req.params.id;
     let user_id = parseInt(id);
     let { request_user_id } = req.query;
+    let request_user_id_num = parseInt(request_user_id as string);
 
     let { date } = req.query;
     let datObject: Date;
@@ -20,10 +21,27 @@ class UserController extends ControllerBase {
       if (!result) {
         throw new Error("getUserProfile失敗");
       }
-      let isFriend = await this.neo4jFriendShipService.checkIsFriend(parseInt(request_user_id as string), parseInt(id));
+      let friendStatus: string;
+      if (request_user_id_num == user_id) {
+        friendStatus = "isSelf";
+      } else {
+        let friendNodes = await this.neo4jFriendShipService.checkUsersAreFriend(request_user_id_num, [user_id]);
+        let friendNode = friendNodes[0];
+        if (friendNode) {
+          if (friendNode["friendship"] != null) {
+            friendStatus = "isFriend";
+          } else if (friendNode["receiveRequestUser"] != null) {
+            friendStatus = "hasBeenSentRequest";
+          } else if (friendNode["requestSender"] != null) {
+            friendStatus = "requestNeedRespond";
+          }
+        } else {
+          friendStatus = "notFriend";
+        }
+      }
       let json = {
         user: result,
-        isFriend: isFriend,
+        friendStatus: friendStatus,
       };
       res.json(json);
       res.status(200);

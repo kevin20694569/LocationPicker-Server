@@ -2,11 +2,13 @@ import axios from "axios";
 import fs from "fs";
 import "dotenv/config";
 import path from "path";
+import uploadMediaController from "../../controller/ResourceController/UploadMediaController";
 
 interface GoogleMapTextSearchQuery {}
 
 class GoogleMapAPIService {
   protected apiKey: String;
+  protected uploadMediaController = new uploadMediaController();
   constructor(apiKey?: string) {
     this.apiKey = apiKey ?? process.env.GoogleMapAPIKey;
   }
@@ -56,7 +58,7 @@ class GoogleMapAPIService {
     }
   }
 
-  async downloadPhoto(photoReference: String, restaurant_id: String) {
+  async downloadPhoto(photoReference: string, restaurant_id: string) {
     const apiUrl = `https://maps.googleapis.com/maps/api/place/photo`;
 
     const response = await axios({
@@ -70,16 +72,8 @@ class GoogleMapAPIService {
         language: "zh-TW",
       },
     });
-    let filename: String = `${restaurant_id}.jpg`;
 
-    const filePath = path.resolve(__dirname, `../../../public/media/restaurantimage/${filename}`);
-    const writer = fs.createWriteStream(filePath);
-
-    response.data.pipe(writer);
-    return await new Promise((resolve, reject) => {
-      writer.on("finish", resolve);
-      writer.on("error", reject);
-    });
+    return await this.uploadMediaController.uploadRestaurantImage(restaurant_id, response.data);
   }
 }
 
