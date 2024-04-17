@@ -1,7 +1,7 @@
 import socketIO from "socket.io";
 import ControllerBase from "../ControllerBase";
 import { MessageType } from "../..//Model/MongoDB/MongoDBModel";
-import { resultTransformers } from "neo4j-driver";
+
 class SocketIOSingletonController extends ControllerBase {
   static instance: SocketIOSingletonController;
   protected io: socketIO.Server;
@@ -10,15 +10,18 @@ class SocketIOSingletonController extends ControllerBase {
   protected socketIDToSocketDict: object = {};
   constructor(server?) {
     super();
-    if (!SocketIOSingletonController.instance) {
-      this.io = new socketIO.Server(server, {
-        cors: {
-          origin: "*",
-          methods: ["GET", "POST"],
-        },
-      });
-      this.registerChatSocketEvents();
-      SocketIOSingletonController.instance = this;
+    if (server) {
+      if (!SocketIOSingletonController.instance) {
+        this.io = new socketIO.Server(server, {
+          cors: {
+            origin: "*",
+            methods: ["GET", "POST"],
+          },
+        });
+        this.registerChatSocketEvents();
+
+        SocketIOSingletonController.instance = this;
+      }
     }
     return SocketIOSingletonController.instance;
   }
@@ -49,9 +52,8 @@ class SocketIOSingletonController extends ControllerBase {
       });
 
       socket.on("joinRooms", (data) => {
-        let chatRoomIDs = data.room_ids;
-
-        chatRoomIDs.forEach((id) => {
+        let chatroom_ids = data.room_ids;
+        chatroom_ids.forEach((id) => {
           socket.join(id);
         });
       });
@@ -61,7 +63,7 @@ class SocketIOSingletonController extends ControllerBase {
         await this.mongodbMessageService.markMessagesAsRead(room_id);
 
         const room = await this.mongodbChatRoomService.getRoomByRoomID(room_id);
-        let room_users = room.room_users;
+        let room_users = room.user_ids;
         let roomusersSocketids = [];
         room_users.forEach((userid) => {
           if (this.userToSocketIDArrayDict[userid]) {
@@ -84,6 +86,7 @@ class SocketIOSingletonController extends ControllerBase {
           const message = data.message;
           const sender_id = data.sender_id;
           const receive_ids = data.receive_ids;
+          console.log(message, sender_id, receive_ids);
           await this.emitSendMessage(sender_id, receive_ids, message);
         } catch (error) {
           console.log(error);
@@ -123,7 +126,7 @@ class SocketIOSingletonController extends ControllerBase {
       });
 
       socket.on("disconnect", () => {
-        let user_id;
+        let user_id: string;
         if (this.socketIDToUserDict.hasOwnProperty(socket.id)) {
           user_id = this.socketIDToUserDict[socket.id];
           delete this.socketIDToSocketDict[socket.id];
@@ -150,18 +153,18 @@ class SocketIOSingletonController extends ControllerBase {
   }
 
   async emitSendMessage(
-    sender_id: number,
-    receive_ids: number[],
+    sender_id: string,
+    receive_ids: string[],
     message?: string,
     shared_post_id?: string,
-    shared_user_id?: number,
+    shared_user_id?: string,
     shared_restaurant_id?: string
   ) {
     const rooms = await this.mongodbChatRoomService.getRoomsBySenderidAndRecieveids(sender_id, receive_ids);
     let roomMap = {};
     const room_ids = rooms.map((room) => {
-      roomMap[room.room_id] = room;
-      return room.room_id;
+      roomMap[room._id] = room;
+      return room._id;
     });
     let type: MessageType = MessageType.General;
 
@@ -184,42 +187,61 @@ class SocketIOSingletonController extends ControllerBase {
     );
     let roomusersSocketids = [];
     let messageMap = {};
-
     receive_ids.forEach((userid) => {
       if (this.userToSocketIDArrayDict[userid]) {
         roomusersSocketids.push(this.userToSocketIDArrayDict[userid]);
       }
     });
+    let restaurantMap = {};
+    let userMap = {};
     for (let message of messageData) {
-      if (message.shared_Post_id) {
-        let posts = await this.mongodbPostService.getPostFromID(message.shared_Post_id);
+      if (message.shared_post_id) {
+        let posts = await this.mongodbPostService.getPostFromID(message.shared_post_id);
         let post = posts[0];
-        let restaurant = await this.mysqlRestaurantsTableService.getrestaurantDistanceAndDetail(post.restaurant_id);
-
+        let restaurant;
+        if (restaurantMap[post.restaurant_id]) {
+          restaurant = restaurantMap[post.restaurant_id];
+        } else {
+          restaurant = await this.mysqlRestaurantsTableService.getrestaurantDistanceAndDetail(post.restaurant_id);
+          restaurantMap[post.restaurant_id] = restaurant;
+        }
         message["message"] = "分享了一則貼文";
         message = {
           ...message._doc,
           sharedPost: post,
           sharedPostRestaurant: restaurant,
         };
-      } else if (message.shared_User_id) {
-        let user = await this.mysqlUsersTableService.getUserProfileByID(message.shared_User_id);
+      } else if (message.shared_user_id) {
+        let user;
+        if (userMap[message.shared_yser_id]) {
+          user = userMap[message.shared_yser_id];
+        } else {
+          user = await this.mysqlUsersTableService.getUserProfileByID(message.shared_user_id);
+          userMap[message.shared_user_id] = user;
+        }
         message = {
           ...message._doc,
-          sharedUser: user,
+          shareduser: user,
         };
         message["message"] = "分享了一個帳號";
-      } else if (message.shared_Restaurant_id) {
-        let restaurant = await this.mysqlRestaurantsTableService.getrestaurantDistanceAndDetail(message.shared_Restaurant_id);
+      } else if (message.shared_restaurant_id) {
+        let restaurant;
+        if (restaurantMap[message.shared_restaurant_id]) {
+          restaurant = restaurantMap[message.shared_restaurant_id];
+        } else {
+          restaurant = await this.mysqlRestaurantsTableService.getrestaurantDistanceAndDetail(message.shared_restaurant_id);
+          restaurantMap[message.shared_restaurant_id] = restaurant;
+        }
         message = {
           ...message._doc,
-          sharedRestaurant: restaurant,
+          sharedrestaurant: restaurant,
         };
         message["message"] = "分享了一個地點";
       }
+
       let room = roomMap[message.room_id];
-      let room_users = room.room_users;
-      for (let user_id of room_users) {
+      let user_ids = room.user_ids;
+      for (let user_id of user_ids) {
         if (messageMap[user_id]) {
           messageMap[user_id].push(message);
         } else {
@@ -231,10 +253,9 @@ class SocketIOSingletonController extends ControllerBase {
       for (let socket_id of socketidArray) {
         let user_id = this.socketIDToUserDict[socket_id];
         let socket = this.socketIDToSocketDict[socket_id];
-
         let message = messageMap[user_id];
         const jsonString = JSON.stringify(message);
-        console.log(message);
+
         const buffer = Buffer.from(jsonString, "utf8");
         socket.emit("message", buffer);
       }
@@ -243,7 +264,7 @@ class SocketIOSingletonController extends ControllerBase {
 
   getSocketsArray() {}
 
-  emitUploadProgressToSocket(socket_id, progress) {
+  emitUploadProgressToSocket(socket_id: string, progress) {
     let socket = this.socketIDToSocketDict[socket_id];
     let data = {
       progress: progress,
@@ -253,7 +274,7 @@ class SocketIOSingletonController extends ControllerBase {
     }
   }
 
-  emitUploadTaskFinished(socket_id, success) {
+  emitUploadTaskFinished(socket_id: string, success) {
     let socket = this.socketIDToSocketDict[socket_id];
     let data = {
       success: success,

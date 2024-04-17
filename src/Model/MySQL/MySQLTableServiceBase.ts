@@ -1,21 +1,23 @@
 import mysql from "mysql2/promise";
 import "dotenv/config";
-
 abstract class MySQLTableControllerBase {
-  private dbPassword: string = process.env.DB_Password as string;
-  protected serverIP: string = process.env.ServerIP as string;
+  private dbPassword: string = process.env.mysql_dbpassword as string;
+  protected serverIP: string = process.env.serverip as string;
+  protected host: string = process.env.mysql_host as string;
+  protected user: string = process.env.mysql_user as string;
+  protected mysql_DBName: string = process.env.mysql_dbname as string;
   protected pool: mysql.Pool;
   protected connection: mysql.PoolConnection;
   constructor(password?: string) {
-    this.dbPassword = process.env.DB_Password as string;
+    this.dbPassword = process.env.mysql_dbpassword as string;
     if (password) {
       this.dbPassword = password;
     }
     this.pool = mysql.createPool({
-      host: "localhost",
-      user: "root",
+      host: this.host,
+      user: this.user,
       password: this.dbPassword,
-      database: "mysql_test",
+      database: this.mysql_DBName,
     });
   }
 

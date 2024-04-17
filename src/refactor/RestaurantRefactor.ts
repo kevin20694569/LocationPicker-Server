@@ -7,6 +7,8 @@ import MongoDBPostService from "../Model/MongoDB/MongoDBPostService";
 import MongoDB from "../Model/MongoDB/MongoDB";
 import Neo4jFriendShipService from "../Model/Neo4j/Neo4jFriendShipService";
 import "dotenv/config";
+import { UserModel } from "../Model/MongoDB/MongoDBModel";
+import MongoDBUserService from "src/Model/MongoDB/MongoDBUserService";
 class Refactor {
   sqlDBPassword: string;
   restaurantTableService: MySQLRestaurantsTableService;
@@ -27,7 +29,7 @@ class Refactor {
       this.mongoDBConnection.connectToMongoDB();
       let results = await this.restaurantTableService.getAllTableRestaurants();
       let place_ids = results.map((place) => {
-        return place.restaurant_id;
+        return place.id;
       });
       let newInit = 0;
       for (let i = 0; i < place_ids.length; i++) {
@@ -59,7 +61,7 @@ class Refactor {
       }
       let newInit = 0;
       for (let i = 0; i < results.length; i++) {
-        let id = results[i].user_id;
+        let id = results[i].id;
         await this.updateUserPostsCount(id);
         await this.updateUserFriendsCount(id);
         newInit += 1;

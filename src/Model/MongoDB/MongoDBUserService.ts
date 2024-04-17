@@ -2,9 +2,8 @@ import { UserModel } from "./MongoDBModel";
 
 class MongoDBUserService {
   protected userModel = UserModel;
-  async createUser(user_id) {
+  async createUser(user_id: string) {
     try {
-      user_id = parseInt(user_id);
       let user = {
         user_id: user_id,
       };
@@ -15,19 +14,19 @@ class MongoDBUserService {
     }
   }
 
-  async searchUserHaveRoomId(user_id, room_id) {
-    let result = await this.userModel.findOne({ user_id: user_id }, { chatRoomIds: { $elemMatch: { $nin: [room_id] } } });
+  async searchUserHaveRoomId(user_id: string, room_id: string) {
+    let result = await this.userModel.findOne({ user_id: user_id }, { chatroom_ids: { $elemMatch: { $nin: [room_id] } } });
 
     return result.user_id;
   }
 
-  async insertRoomIdToUser(user_ids, room_id) {
+  async insertRoomIdToUser(user_ids: string[], room_id: string) {
     try {
-      let results = await this.userModel.updateMany({ user_id: user_ids }, { $push: { chatRoomIds: room_id } }, { new: true });
+      let results = await this.userModel.updateMany({ user_id: user_ids }, { $push: { chatroom_ids: room_id } }, { new: true });
       return results;
     } catch (error) {
       console.log(error);
-      throw new Error("user文檔新增roomid失敗");
+      throw error;
     }
   }
 }

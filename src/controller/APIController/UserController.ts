@@ -4,11 +4,9 @@ import "dotenv/config";
 
 class UserController extends ControllerBase {
   async getUserProfile(req: Request, res: Response, next: NextFunction) {
-    let id = req.params.id;
-    let user_id = parseInt(id);
+    let user_id = req.params.id;
     let { request_user_id } = req.query;
-    let request_user_id_num = parseInt(request_user_id as string);
-
+    request_user_id = request_user_id as string;
     let { date } = req.query;
     let datObject: Date;
     if (date == undefined || date == "" || date == null) {
@@ -22,10 +20,10 @@ class UserController extends ControllerBase {
         throw new Error("getUserProfile失敗");
       }
       let friendStatus: string;
-      if (request_user_id_num == user_id) {
+      if (request_user_id == user_id) {
         friendStatus = "isSelf";
       } else {
-        let friendNodes = await this.neo4jFriendShipService.checkUsersAreFriend(request_user_id_num, [user_id]);
+        let friendNodes = await this.neo4jFriendShipService.checkUsersAreFriend(request_user_id, [user_id]);
         let friendNode = friendNodes[0];
         if (friendNode) {
           if (friendNode["friendship"] != null) {
@@ -39,6 +37,7 @@ class UserController extends ControllerBase {
           friendStatus = "notFriend";
         }
       }
+
       let json = {
         user: result,
         friendStatus: friendStatus,

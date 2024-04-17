@@ -9,17 +9,15 @@ class Neo4jFriendShipService {
     // await this.driver.close();
   }
 
-  async createUser(user_id: Number, user_name: String) {
+  async createUser(user_id: string) {
     try {
       let query = `
         MERGE (user:User {
-          user_ID: $user_id,
-          name : $user_name
+          user_id: $user_id
         }) RETURN user
       `;
       let results = await this.session.run(query, {
         user_id,
-        user_name,
       });
       if (results.records.length <= 0) {
         throw new Error("創建User失敗");
@@ -33,15 +31,14 @@ class Neo4jFriendShipService {
     }
   }
 
-  async sendFriendRequest(from_user_id: Number, to_user_id: Number) {
+  async sendFriendRequest(from_user_id: string, to_user_id: string) {
     try {
-      console.log(from_user_id, to_user_id);
       if (from_user_id == to_user_id) {
         throw new Error("不得寄好友邀請給自己");
       }
       let query = `
-      MATCH (user1:User {user_ID: $from_user_id})
-      MATCH (user2:User {user_ID: $to_user_id})
+      MATCH (user1:User {user_id: $from_user_id})
+      MATCH (user2:User {user_id: $to_user_id})
       OPTIONAL MATCH (user1)-[*1]-(request:FriendRequest)-[*1]-(user2)
       OPTIONAL MATCH (user1)-[*1]-(friendship:Friendship)-[*1]-(user2)
       
@@ -69,10 +66,10 @@ class Neo4jFriendShipService {
     }
   }
 
-  async acceptToCreateFriendship(accept_user_id: Number, friend_request_id: Number) {
+  async acceptToCreateFriendship(accept_user_id: string, friend_request_id: string) {
     try {
       let query = `
-      MATCH (user2: User { user_ID : $accept_user_id })
+      MATCH (user2: User { user_id : $accept_user_id })
       OPTIONAL MATCH (user1:User)-[:SENT_FRIEND_REQUEST]->(request:FriendRequest)-[:TO_USER]->(user2)
       WITH user1, user2, request
       WHERE id(request) = $friend_request_id
@@ -99,11 +96,10 @@ class Neo4jFriendShipService {
     }
   }
 
-  async acceptToCreateFriendshipByEachUserID(accept_user_id: Number, sent_user_id: Number) {
+  async acceptToCreateFriendshipByEachUserID(accept_user_id: string, sent_user_id: string) {
     try {
-      console.log(accept_user_id, sent_user_id);
       let query = `
-      MATCH (user1:User { user_ID: $sent_user_id }), (user2:User { user_ID: $accept_user_id })
+      MATCH (user1:User { user_id: $sent_user_id }), (user2:User { user_id: $accept_user_id })
       WHERE NOT EXISTS((user1)-[:USER1]-(:Friendship)-[:USER2]-(user2))
       AND NOT EXISTS((user2)-[:USER2]-(:Friendship)-[:USER1]-(user1))
       OPTIONAL MATCH (user1)-[:SENT_FRIEND_REQUEST]->(request:FriendRequest)-[:TO_USER]->(user2)
@@ -130,15 +126,15 @@ class Neo4jFriendShipService {
     }
   }
 
-  async searchFriendsByUserID(user_id: number, excluded_user_id?: number): Promise<any[]> {
+  async searchFriendsByUserID(user_id: string, excluded_user_id?: [string]): Promise<any[]> {
     try {
       if (!excluded_user_id) {
         excluded_user_id = null;
       }
       let query = `
       MATCH (u:User)-[*1]-(friendship:Friendship)-[*1]-(friend:User)
-      WHERE u.user_ID = $user_id
-      AND ($excluded_user_id IS NULL OR friend.user_ID <> $excluded_user_id)
+      WHERE u.user_id = $user_id
+      AND ($excluded_user_id IS NULL OR NOT friend.user_id IN $excluded_user_id)
       RETURN friendship, friend
       `;
       let results = await this.session.run(query, { user_id, excluded_user_id });
@@ -157,23 +153,23 @@ class Neo4jFriendShipService {
   // 30 -> 29 friendrequest
   // not friend
 
-  async checkUsersAreFriend(from_user_id: Number, to_user_id_Array: Number[]) {
+  async checkUsersAreFriend(from_user_id: string, to_user_id_Array: string[]) {
     try {
       let query = `
       MATCH (fromUser:User)-[*1]-(friendship:Friendship)-[*1]-(toUser:User)
-      WHERE fromUser.user_ID = $from_user_id AND toUser.user_ID IN $to_user_id_Array
+      WHERE fromUser.user_id = $from_user_id AND toUser.user_id IN $to_user_id_Array
       RETURN toUser AS user, friendship AS friendship, null AS request, null AS requestSender, null AS receiveRequestUser
           
       UNION
             
       MATCH (fromUser:User)-[*1]->(request:FriendRequest)-[*1]->(toUser:User)
-      WHERE fromUser.user_ID = $from_user_id AND toUser.user_ID IN $to_user_id_Array 
+      WHERE fromUser.user_id = $from_user_id AND toUser.user_id IN $to_user_id_Array 
       RETURN toUser AS user, null AS friendship, request AS request, null AS requestSender, toUser AS receiveRequestUser
       
       UNION
       
       MATCH (fromUser:User)-[*1]->(request:FriendRequest)-[*1]->(toUser:User)
-      WHERE fromUser.user_ID IN $to_user_id_Array AND toUser.user_ID = $from_user_id
+      WHERE fromUser.user_id IN $to_user_id_Array AND toUser.user_id = $from_user_id
       RETURN fromUser AS user, null AS friendship, request AS request, fromUser AS requestSender, null AS receiveRequestUser
       ORDER BY 
       CASE WHEN requestSender IS NOT NULL THEN 0 ELSE 1 END, 
@@ -190,14 +186,14 @@ class Neo4jFriendShipService {
     }
   }
 
-  async searchFriendRecieveRequestsByUserID(user_id: number, date: string): Promise<any[]> {
+  async searchFriendRecieveRequestsByUserID(user_id: string, date: string): Promise<any[]> {
     if (date) {
     } else {
       date = new Date().toISOString();
     }
     try {
       let query = `
-      MATCH (u: User)-[:SENT_FRIEND_REQUEST]->(f:FriendRequest)-[*1]->(user2: User { user_ID : $user_id}) 
+      MATCH (u: User)-[:SENT_FRIEND_REQUEST]->(f:FriendRequest)-[*1]->(user2: User { user_id : $user_id}) 
       WHERE f.sent_time < $date
       RETURN u AS from_user , f AS request
       ORDER BY f.sent_time DESC;`;
@@ -214,14 +210,15 @@ class Neo4jFriendShipService {
       this.close();
     }
   }
-  async searchFriendSentRequestsByUserID(user_id: number, date: string): Promise<any[]> {
+  async searchFriendSentRequestsByUserID(user_id: string, date: string): Promise<any[]> {
     if (date) {
     } else {
       date = new Date().toISOString();
     }
+
     try {
       let query = `
-      MATCH ( User { user_ID : $user_id} )-[ sent :SENT_FRIEND_REQUEST]->(f:FriendRequest)-[*1]->(user2: User ) 
+      MATCH ( User { user_id : $user_id} )-[ sent :SENT_FRIEND_REQUEST]->(f:FriendRequest)-[*1]->(user2: User ) 
       WHERE f.sent_time < $date
       RETURN user2 AS to_user, f AS request
       ORDER BY f.sent_time DESC;`;
@@ -235,11 +232,11 @@ class Neo4jFriendShipService {
     }
   }
 
-  async deleteFriendShip(from_user_id: Number, to_user_id: Number) {
+  async deleteFriendShip(from_user_id: string, to_user_id: string) {
     try {
       let query = `
-      MATCH (from_user : User {user_ID: $from_user_id})-[*1]-(friendship:Friendship)-[*1]-(to_user :User {user_ID: $to_user_id})
-      DELET friendship
+      MATCH (from_user : User {user_id: $from_user_id})-[*1]-(friendship:Friendship)-[*1]-(to_user :User {user_id: $to_user_id})
+      DETACH DELETE friendship
       Return from_user, to_user, friendship;      
       `;
       let results = await this.session.run(query, { from_user_id, to_user_id });
@@ -255,10 +252,10 @@ class Neo4jFriendShipService {
     }
   }
 
-  async deleteFriendRequest(from_user_id: Number, to_user_id: Number) {
+  async deleteFriendRequest(from_user_id: string, to_user_id: string) {
     try {
       let query = `
-      MATCH (from_user:User {user_ID: $from_user_id})-[*1]-(request:FriendRequest)-[*1]-(to_user:User {user_ID: $to_user_id})
+      MATCH (from_user:User {user_id: $from_user_id})-[*1]-(request:FriendRequest)-[*1]-(to_user:User {user_id: $to_user_id})
       Detach DELETE request
       return from_user, to_user, request;
       `;

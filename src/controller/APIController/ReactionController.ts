@@ -2,22 +2,23 @@ import { Request, Response, NextFunction } from "express";
 import ControllerBase from "../ControllerBase";
 
 class ReactionController extends ControllerBase {
-  protected postMediaFolderString = process.env.ServerIP + "/public/media";
+  protected postMediaFolderString = process.env.serverip + "/public/media";
 
   async getPostReactions(req: Request, res: Response, next: NextFunction) {
     const post_id = req.params.id;
-    const { request_user_id, date } = req.query;
+    let { request_user_id, date } = req.query;
+    request_user_id = request_user_id as string;
     let dateObject: Date = new Date();
     if (date) {
       dateObject = new Date(date as string);
     }
-    const request_user_id_num = parseInt(request_user_id as string);
-    let results = await this.neo4jFriendShipService.searchFriendsByUserID(request_user_id_num);
+
+    let results = await this.neo4jFriendShipService.searchFriendsByUserID(request_user_id);
 
     let friends_ids = results.map((result) => {
       return result.friend.user_ID;
     });
-    let reactions = await this.mongodbReactionService.getPostReactions(post_id, request_user_id_num, friends_ids, dateObject);
+    let reactions = await this.mongodbReactionService.getPostReactions(post_id, request_user_id, friends_ids, dateObject);
     res.status(200);
     res.json(reactions);
     res.end();
@@ -28,7 +29,7 @@ class ReactionController extends ControllerBase {
     let { user_id, reaction, liked } = req.body;
 
     try {
-      await this.mongodbReactionService.updateReaction(post_id, parseInt(user_id as string), liked as boolean, reaction);
+      await this.mongodbReactionService.updateReaction(post_id, user_id, liked as boolean, reaction);
       res.status(200);
       res.send("updateReaction成功");
     } catch (error) {

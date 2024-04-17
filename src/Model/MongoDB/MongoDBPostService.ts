@@ -6,12 +6,12 @@ class MongoDBPostService {
   protected standardPostProjectOutput = StandardPostProjectOutput;
   protected randomPostProjectOutput = RandomPostProjectOutput;
 
-  async insertPost(post_title, post_content, media_data, user_id, location, restaurant_id, grade) {
+  async insertPost(title: string, content: string, media: [any], user_id: string, location: any, restaurant_id: string, grade: number) {
     try {
       let postmodel = new this.postModel({
-        post_title: post_title,
-        post_content: post_content,
-        media_data: media_data,
+        title: title,
+        content: content,
+        media: media,
         user_id: user_id,
         created_at: new Date(),
         location: location,
@@ -42,12 +42,12 @@ class MongoDBPostService {
     }
   }
 
-  getRandomPublicPostsFromDistance = async (long: number, lat: number, distanceThreshold: number) => {
+  async getRandomPublicPostsFromDistance(longitude: number, latitude: number, distanceThreshold: number) {
     try {
       const results = await this.postModel.aggregate([
         {
           $geoNear: {
-            near: { type: "Point", coordinates: [long, lat] },
+            near: { type: "Point", coordinates: [longitude, latitude] },
             distanceField: "distance",
             spherical: true,
           },
@@ -75,9 +75,9 @@ class MongoDBPostService {
     } catch (error) {
       throw error;
     }
-  };
+  }
 
-  async getPostsFromPostsID(post_ids) {
+  async getPostsFromPostsID(post_ids: string[]) {
     try {
       let ob_Ids = post_ids.map((id) => {
         let obID = new mongoose.Types.ObjectId(id);
@@ -109,12 +109,12 @@ class MongoDBPostService {
     }
   }
 
-  async getRestaurantPostsFromRestaurantID(Restaurant_ID: string, date: Date) {
+  async getRestaurantPostsFromRestaurantID(restaurant_id: string, date: Date) {
     try {
       const results = await this.postModel.aggregate([
         {
           $match: {
-            restaurant_id: Restaurant_ID,
+            restaurant_id: restaurant_id,
             created_at: { $lt: date },
           },
         },
@@ -126,19 +126,20 @@ class MongoDBPostService {
       throw error;
     }
   }
-  async getNearLocationPostsFromFriendsByUserID(friendIds: number[], distanceThreshold: number, lat: number, long: number) {
+  async getNearLocationPostsFromFriendsByUserID(friend_ids: string[], distanceThreshold: number, latitude: number, longitude: number) {
     try {
+      console.log(friend_ids);
       const results = await this.postModel.aggregate([
         {
           $geoNear: {
-            near: { type: "Point", coordinates: [long, lat] },
+            near: { type: "Point", coordinates: [longitude, latitude] },
             distanceField: "distance",
             spherical: true,
           },
         },
         {
           $match: {
-            user_id: { $in: friendIds },
+            user_id: { $in: friend_ids },
             distance: { $gt: distanceThreshold },
           },
         },
@@ -167,7 +168,7 @@ class MongoDBPostService {
     }
   }
 
-  async getPostsByUserID(user_id: number, date: Date) {
+  async getPostsByUserID(user_id: string, date: Date) {
     try {
       const results = await this.postModel.aggregate([
         {
@@ -185,7 +186,7 @@ class MongoDBPostService {
     }
   }
 
-  async getFriendsPostByCreatedTime(friend_Ids: number[], date: Date, longtitude: number, latitude: number) {
+  async getFriendsPostByCreatedTime(friend_ids: string[], date: Date, longtitude: number, latitude: number) {
     try {
       let match: PipelineStage[] = [
         {
@@ -197,7 +198,7 @@ class MongoDBPostService {
         },
         {
           $match: {
-            user_id: { $in: friend_Ids },
+            user_id: { $in: friend_ids },
             created_at: { $lt: date },
           },
         },
@@ -213,11 +214,11 @@ class MongoDBPostService {
     }
   }
 
-  async updatePostReactionCount(post_id, needIncreaseReactionType, needDecreaseReactionType, likeAddCount) {
+  async updatePostReactionCount(post_id: string, needIncreaseReactionType, needDecreaseReactionType, likeAddCount) {
     try {
-      post_id = new mongoose.Types.ObjectId(post_id);
+      let objectID = new mongoose.Types.ObjectId(post_id);
 
-      const post = await this.postModel.findById(post_id);
+      const post = await this.postModel.findById(objectID);
       if (needIncreaseReactionType) {
         post.reactions[needIncreaseReactionType]++;
       }
@@ -234,9 +235,9 @@ class MongoDBPostService {
     }
   }
 
-  async deletePost(post_id) {
-    post_id = new mongoose.Types.ObjectId(post_id);
-    const post = await this.postModel.deleteOne(post_id);
+  async deletePost(post_id: string) {
+    let objectID = new mongoose.Types.ObjectId(post_id);
+    const post = await this.postModel.deleteOne(objectID);
   }
 
   async calculateRestaurantAverage() {

@@ -4,23 +4,21 @@ import MongoDBBusiness_TimeService from "../MongoDB/MongoDBBusinessTimeService";
 
 class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   protected restaurantImageIP = this.serverIP + "/restaurantimage/";
-  protected selectString = `CONCAT("${this.restaurantImageIP}", restaurant_id, ".jpg") AS restaurant_imageurl`;
+  protected selectString = `CONCAT("${this.restaurantImageIP}", id, ".jpg") AS restaurant_imageurl`;
   protected googleMapAPIService = new GoogleMapAPIService();
   protected business_TimeService = new MongoDBBusiness_TimeService();
   constructor(password?: string) {
     super(password);
   }
 
-  async findRestaurantID(restaurant_ID: String, firstGrade?: number) {
+  async findRestaurantID(restaurant_ID: string, firstGrade?: number) {
     try {
       await this.getConnection();
-
-      let query = `select * from restaurants where restaurant_id = ?;`;
+      let query = `select * from restaurants where id = ?;`;
       let params = [restaurant_ID];
       let results: any[];
       let fields: any;
       [results, fields] = await this.pool.query(query, params);
-
       let restaurantDetail;
       if (results.length < 1) {
         let restaurant = await this.restaurantsearchfromgoogleByID(restaurant_ID);
@@ -67,7 +65,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     await this.getConnection();
     let query = `UPDATE restaurants
     SET average_grade = (average_grade * posts_count + ?) / (posts_count + 1)
-    WHERE restaurant_id = ?;`;
+    WHERE id = ?;`;
     let params = [input_grade, restaurant_id];
     let results: any[];
     let fields: any;
@@ -75,7 +73,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   }
 
   async updateRestaurantPostsCountWithInput(restaurant_id: String, increaseCount: Number) {
-    let query = `update restaurants set posts_count = posts_count + ? where restaurant_id = ?`;
+    let query = `update restaurants set posts_count = posts_count + ? where id = ?`;
     let params = [increaseCount, restaurant_id];
     let results: any[];
     let fields: any;
@@ -83,7 +81,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   }
 
   async updateRestaurantPostsCount(restaurant_id: String, posts_count: Number) {
-    let query = `update restaurants set posts_count = ? where restaurant_id = ?`;
+    let query = `update restaurants set posts_count = ? where id = ?`;
     let params = [posts_count, restaurant_id];
     let results: any[];
     let fields: any;
@@ -97,7 +95,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     try {
       await this.getConnection();
 
-      let query = `select *, ST_DISTANCE(POINT(restaurants.restaurant_longitude, restaurants.restaurant_latitude), POINT(?, ?)) AS distance, ${this.selectString}  from restaurants where restaurants.restaurant_id = ?;`;
+      let query = `select *, ST_DISTANCE(POINT(restaurants.longitude, restaurants.latitude), POINT(?, ?)) AS distance, ${this.selectString}  from restaurants where restaurants.id = ?;`;
       var params = [lng ?? 0, lat ?? 0, restaurant_id];
       let results: any[];
       let fields: any;
@@ -120,7 +118,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     try {
       let { place_id, name, formatted_address, lat, lng, takeout, reservable, price_level, website, formatted_phone_number } = restaurant;
       await this.getConnection();
-      let query = `update restaurants set restaurant_name = ?, restaurant_address = ?, restaurant_latitude = ?, restaurant_longitude = ?, takeout = ?, reservable = ?, price_level = ?, website = ?, formatted_phone_number = ? where restaurant_id = ? ;`;
+      let query = `update restaurants set name = ?, address = ?, latitude = ?, longitude = ?, takeout = ?, reservable = ?, price_level = ?, website = ?, formatted_phone_number = ? where id = ? ;`;
       let params = [name, formatted_address, lat, lng, takeout, reservable, price_level, website, formatted_phone_number, place_id];
       let results: any[];
       let fields: any;
@@ -137,7 +135,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     let { place_id, name, formatted_address, lat, lng, takeout, reservable, price_level, website, formatted_phone_number } = restaurant;
     try {
       await this.getConnection();
-      let query = `insert into restaurants (restaurant_id, restaurant_name, restaurant_address, restaurant_latitude, restaurant_longitude, average_grade, posts_count, takeout, reservable, price_level, website, formatted_phone_number) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
+      let query = `insert into restaurants (id, name, address, latitude, longitude, average_grade, posts_count, takeout, reservable, price_level, website, formatted_phone_number) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
       let results: any[];
       let fields: any;
       let params = [place_id, name, formatted_address, lat, lng, grade, 1, takeout, reservable, price_level, website, formatted_phone_number];
@@ -153,7 +151,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   async deleteRestaurant(place_id: String) {
     try {
       await this.getConnection();
-      let query = `DELETE FROM restaurants  WHERE restaurant_id = ?;`;
+      let query = `DELETE FROM restaurants WHERE id = ?;`;
       let params = [place_id];
       let results: any[];
       let fields: any;
@@ -172,7 +170,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
         return [];
       }
       await this.getConnection();
-      let query = `Select *, ${this.selectString} from restaurants Where restaurant_id in (?)`;
+      let query = `Select *, ${this.selectString} from restaurants Where id in (?)`;
       let params = [restaurant_Ids];
       let results: any[];
       let fields: any;
@@ -192,12 +190,12 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     try {
       await this.getConnection();
       let query = `select *,
-      ST_DISTANCE(POINT(restaurants.restaurant_longitude, restaurants.restaurant_latitude), POINT(?, ?)) AS distance,
+      ST_DISTANCE(POINT(restaurants.longitude, restaurants.latitude), POINT(?, ?)) AS distance,
       ${this.selectString}
       from restaurants 
-      WHERE restaurants.restaurant_id IS NOT NULL AND ST_DISTANCE(POINT(restaurants.restaurant_longitude, restaurants.restaurant_latitude)
+      WHERE restaurants.restaurant_id IS NOT NULL AND ST_DISTANCE(POINT(restaurants.longitude, restaurants.latitude)
       POINT(?, ?))  > ?
-      AND restaurants.restaurant_id != ?
+      AND restaurants.id != ?
       ORDER BY distance
       limit ?`;
 
@@ -241,7 +239,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   async updateAverageGrade(restaurant_id: String, averge_grade: Number) {
     try {
       await this.getConnection();
-      let query = `update restaurants set average_grade = ? where restaurant_id = ?;`;
+      let query = `update restaurants set average_grade = ? where id = ?;`;
       let params = [averge_grade, restaurant_id];
       let results: any[];
       let fields: any;

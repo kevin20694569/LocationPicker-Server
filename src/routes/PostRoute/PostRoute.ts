@@ -2,8 +2,6 @@ import RouteBase from "../RouteBase";
 import PostController from "../../controller/APIController/PostController";
 import UploadMediaController from "../../controller/ResourceController/UploadMediaController";
 import NearLocationRoute from "./NearLocationRoute/NearLocationRoute";
-import multer, { Multer, diskStorage, StorageEngine, FileFilterCallback } from "multer";
-import { error } from "neo4j-driver";
 class PostRoute extends RouteBase {
   protected postController: PostController = new PostController();
   protected nearLocationRoute: NearLocationRoute = new NearLocationRoute();

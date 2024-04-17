@@ -6,7 +6,7 @@ class MongoDBReactionService {
   protected reactionProject = ReactionProjectOutput;
   protected mongoDBPostService = new MongoDBPostService();
 
-  async getPostReactions(post_id: string, selfUser_id: number, user_ids: number[], date: Date) {
+  async getPostReactions(post_id: string, selfUser_id: string, user_ids: string[], date: Date) {
     let results = await this.reactionModel.aggregate([
       {
         $match: { post_id: post_id, updated_at: { $lt: date } },
@@ -64,7 +64,7 @@ class MongoDBReactionService {
     return results;
   }
 
-  async getPostsPublicReactions(post_ids: string[], selfUser_id: number, friend_ids: number[]) {
+  async getPostsPublicReactions(post_ids: string[], selfUser_id: string, friend_ids: string[]) {
     let results = await this.reactionModel.aggregate([
       {
         $match: { post_id: { $in: post_ids }, user_id: { $ne: Number(selfUser_id) } },
@@ -92,13 +92,13 @@ class MongoDBReactionService {
     return results;
   }
 
-  async getSelfReaction(post_id: string, user_id: number) {
+  async getSelfReaction(post_id: string, user_id: string) {
     let reaction = await this.reactionModel.findOne({ post_id: post_id, user_id: user_id });
 
     return reaction;
   }
 
-  async getManyPostsSelfReaction(post_ids: string[], request_user_id: number) {
+  async getManyPostsSelfReaction(post_ids: string[], request_user_id: string) {
     let reactions = await this.reactionModel.aggregate([
       {
         $match: {
@@ -111,11 +111,9 @@ class MongoDBReactionService {
     return reactions;
   }
 
-  async updateReaction(post_id: string, user_id: number, liked?: boolean, reactionInt?: number | null) {
+  async updateReaction(post_id: string, user_id: string, liked?: boolean, reactionInt?: number) {
     try {
-      console.log(reactionInt);
       let reactionString = this.translateReactionToString(reactionInt);
-      console.log(reactionString, liked);
       liked = liked ?? false;
       if (reactionString == null && liked == false) {
         let lastReactionRow: any = await this.reactionModel.findOneAndDelete({ post_id: post_id, user_id: user_id });

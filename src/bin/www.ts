@@ -10,8 +10,7 @@ var app = require("../app");
 var debug = require("debug")("locationpicker-server:server");
 import MongoDB from "../Model/MongoDB/MongoDB";
 
-var http = require("http");
-
+import http from "http";
 /**
  * Get port from environment and store in Express.
  */

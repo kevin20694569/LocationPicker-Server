@@ -27,7 +27,7 @@ abstract class ControllerBase {
 
   protected uploadMediaController: UploadMediaController = new UploadMediaController();
 
-  protected serverIP?: string = process.env.ServerIP;
+  protected serverIP?: string = process.env.serverip;
 }
 
 export default ControllerBase;

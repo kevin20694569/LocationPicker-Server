@@ -19,7 +19,7 @@ class ApiRoute extends RouteBase {
   protected friendRoute: FriendRoute = new FriendRoute();
   protected chatroomRoute: ChatRoomRoute = new ChatRoomRoute();
   protected userAccountRoute: UserAccountRoute = new UserAccountRoute();
-  protected refactor: Refactor = new Refactor(process.env.DB_Password);
+  protected refactor: Refactor = new Refactor(process.env.mysql_dbpassword);
 
   protected registerRoute() {
     this.router.use("/useraccount", (req, res, next) => {

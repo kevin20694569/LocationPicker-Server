@@ -3,12 +3,14 @@ import ControllerBase from "../ControllerBase";
 import fs from "fs";
 import "dotenv/config";
 import mongoose from "mongoose";
+import multer, { Multer } from "multer";
 
 class PostController extends ControllerBase {
   protected postMediaFolderString = "/public/media";
 
   public async getNearLocationPostsWithPublic(req: Request, res: Response, next: NextFunction) {
     let { latitude, longitude, distance, user_id } = req.query;
+    user_id = user_id as string;
     try {
       let posts = await this.mongodbPostService.getRandomPublicPostsFromDistance(
         parseFloat(longitude as string),
@@ -17,7 +19,7 @@ class PostController extends ControllerBase {
       );
       let json = {};
       if (posts.length > 0) {
-        json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
+        json = await this.mergeDataFromPosts(posts, user_id);
       }
       res.json(json);
       res.status(200);
@@ -34,12 +36,13 @@ class PostController extends ControllerBase {
     try {
       let restaurant_id = req.params.id;
       let { date, user_id } = req.query;
+      user_id = user_id as string;
       let dateObject = new Date();
       if (date) {
         dateObject = new Date(date);
       }
       let posts = await this.mongodbPostService.getRestaurantPostsFromRestaurantID(restaurant_id, dateObject);
-      let json = await this.mergeDataFromPosts(posts, parseInt(user_id as string));
+      let json = await this.mergeDataFromPosts(posts, user_id);
 
       res.json(json);
       res.status(200);
@@ -57,11 +60,11 @@ class PostController extends ControllerBase {
       distance = 0;
     }
     try {
-      let user_id = parseInt(request_user_id as string);
-      let friendResults = await this.neo4jFriendShipService.searchFriendsByUserID(user_id);
+      request_user_id = request_user_id as string;
+      let friendResults = await this.neo4jFriendShipService.searchFriendsByUserID(request_user_id);
 
-      let friend_ID_Array = friendResults.map((friend) => {
-        return Number(friend.friend.user_ID);
+      let friend_ID_Array = friendResults.map((result) => {
+        return result.friend.user_id;
       });
 
       let posts = await this.mongodbPostService.getNearLocationPostsFromFriendsByUserID(
@@ -71,7 +74,7 @@ class PostController extends ControllerBase {
         parseFloat(longitude)
       );
       let json = {};
-      json = await this.mergeDataFromPosts(posts, user_id);
+      json = await this.mergeDataFromPosts(posts, request_user_id);
       res.json(json);
       res.status(200);
       res.end();
@@ -83,23 +86,26 @@ class PostController extends ControllerBase {
     }
   }
 
-  public async getFriendsPostsOrderByTime(req, res: Response, next: NextFunction) {
+  public async getFriendsPostsOrderByTime(req: Request, res: Response, next: NextFunction) {
     try {
       let { latitude, longitude, date, request_user_id } = req.query;
-
-      let user_id = parseInt(request_user_id as string);
-
+      request_user_id = request_user_id as string;
       let dateObject = new Date();
       if (date) {
-        dateObject = new Date(date);
+        dateObject = new Date(date as string);
       }
-      let results = await this.neo4jFriendShipService.searchFriendsByUserID(user_id);
+      let results = await this.neo4jFriendShipService.searchFriendsByUserID(request_user_id);
 
       const frined_Ids = results.map((result) => {
-        return parseInt(result.friend.user_ID);
+        return result.friend.user_id;
       });
-      let posts = await this.mongodbPostService.getFriendsPostByCreatedTime(frined_Ids, dateObject, parseFloat(longitude), parseFloat(latitude));
-      let json = await this.mergeDataFromPosts(posts, user_id);
+      let posts = await this.mongodbPostService.getFriendsPostByCreatedTime(
+        frined_Ids,
+        dateObject,
+        parseFloat(longitude as string),
+        parseFloat(latitude as string)
+      );
+      let json = await this.mergeDataFromPosts(posts, request_user_id);
 
       res.json(json);
       res.status(200);
@@ -113,16 +119,14 @@ class PostController extends ControllerBase {
 
   public async getUserPosts(req, res: Response, next: NextFunction) {
     try {
-      let id = req.params.id;
-      let user_id_number = parseInt(id as string);
-      let { date, user_id } = req.query;
-      let request_user_id_num = parseInt(user_id as string);
+      let user_id = req.params.id;
+      let { date, request_user_id } = req.query;
       let dateObject = new Date();
       if (date) {
         dateObject = new Date(date);
       }
-      let posts = await this.mongodbPostService.getPostsByUserID(user_id_number, dateObject);
-      let json = await this.mergeDataFromPosts(posts, request_user_id_num);
+      let posts = await this.mongodbPostService.getPostsByUserID(user_id, dateObject);
+      let json = await this.mergeDataFromPosts(posts, user_id);
       res.json(json);
       res.status(200);
       res.end();
@@ -131,12 +135,13 @@ class PostController extends ControllerBase {
     }
   }
 
-  public async getSinglePost(req, res: Response, next: NextFunction) {
+  public async getSinglePost(req: Request, res: Response, next: NextFunction) {
     try {
       let id = req.params.id;
       let { request_user_id } = req.query;
+      request_user_id = request_user_id as string;
       let posts = await this.mongodbPostService.getPostFromID(id);
-      let data = await this.mergeDataFromPosts(posts, parseInt(request_user_id as string));
+      let data = await this.mergeDataFromPosts(posts, request_user_id);
       let json = data[0];
       res.json(json);
     } catch (error) {
@@ -149,25 +154,25 @@ class PostController extends ControllerBase {
 
   public async uploadPost(req, res: Response, next: NextFunction) {
     try {
-      let { user_id, post_title, post_content, post_itemtitles, restaurant_ID, grade, socket_id } = req.json;
-      let { restaurant_id, restaurant_latitude, restaurant_longitude } = await this.mysqlRestaurantsTableService.findRestaurantID(
-        restaurant_ID,
-        grade
-      );
+      let { user_id, title, content, media_titles, restaurant_id, grade, socket_id } = req.body;
+      let media_titles_array: string[] = media_titles;
+      if (typeof media_titles === "string") {
+        media_titles_array = JSON.parse(media_titles);
+      }
+      let { latitude, longitude } = await this.mysqlRestaurantsTableService.findRestaurantID(restaurant_id, grade);
       let files = req.files;
       if (files == undefined) {
         throw new Error("沒有選擇檔案上傳");
       }
-
-      let media_data = files.map((file, index: number) => {
+      let media = files.map((file: Express.Multer.File, index: number) => {
         const filename = `${file.filename}`;
-        if (post_itemtitles[index] == "") {
-          post_itemtitles[index] = null;
+        if (media_titles_array[index] == "") {
+          media_titles_array[index] = null;
         }
-        let model: { media_id: string; itemtitle: any; _id: any };
+        let model: { resource_id: string; title: any; _id: null };
         model = {
-          media_id: filename,
-          itemtitle: post_itemtitles[index],
+          resource_id: filename,
+          title: media_titles_array[index],
           _id: null,
         };
         return model;
@@ -175,15 +180,16 @@ class PostController extends ControllerBase {
 
       const location = {
         type: "Point",
-        coordinates: [restaurant_longitude, restaurant_latitude],
+        coordinates: [longitude, latitude],
       };
 
-      await this.mongodbPostService.insertPost(post_title, post_content, media_data, user_id, location, restaurant_id, grade);
+      await this.mongodbPostService.insertPost(title, content, media, user_id, location, restaurant_id, grade);
       await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, grade as number);
       await this.mysqlRestaurantsTableService.updateRestaurantPostsCountWithInput(restaurant_id, 1);
       await this.mysqlUsersTableService.modifyUserPostsCount(user_id, 1);
-
-      req.ioService.emitUploadTaskFinished(socket_id, true);
+      if (req.ioService) {
+        req.ioService.emitUploadTaskFinished(socket_id, true);
+      }
       res.status(200).json("上傳成功");
     } catch (error) {
       console.log(error);
@@ -195,7 +201,7 @@ class PostController extends ControllerBase {
 
   public async deletePost(err: Error, req, res: Response, next: NextFunction) {
     let { socket_id, post_id } = req.json;
-    await this.mongodbPostService.deletePost(req.post_id);
+    await this.mongodbPostService.deletePost(post_id);
     req.files.forEach((file: Express.Multer.File) => {
       fs.unlink(file.path, (err) => {
         if (err) {
@@ -205,12 +211,14 @@ class PostController extends ControllerBase {
         console.log("檔案刪除成功");
       });
     });
-    req.ioService.emitUploadTaskFinished(socket_id, false);
+    if (req.ioService) {
+      req.ioService.emitUploadTaskFinished(socket_id, false);
+    }
     res.status(500).json({ message: "Internal server error" });
     res.end();
   }
 
-  protected async mergeDataFromPosts(posts: any[], request_user_id: number) {
+  protected async mergeDataFromPosts(posts: any[], request_user_id: string) {
     if (posts.length < 1) {
       return [];
     }
@@ -219,9 +227,10 @@ class PostController extends ControllerBase {
         return [];
       }
       let post_ids: string[] = [];
-      let users_ids: number[] = [];
+      let users_ids: string[] = [];
       let restaurant_ids = posts.map((post) => {
-        let post_ObID: mongoose.Types.ObjectId = post.post_id;
+        let post_ObID: mongoose.Types.ObjectId = post.id;
+
         let post_id = post_ObID.toHexString();
         post_ids.push(post_id);
         users_ids.push(post.user_id);
@@ -247,12 +256,11 @@ class PostController extends ControllerBase {
     let restaurantsMap = {};
     let selfReactionsMap = {};
     let publicReactionsMap = {};
-    users.forEach((user: { user_id: any }) => {
-      usersMap[`${user.user_id}`] = user;
+    users.forEach((user: { id: string }) => {
+      usersMap[`${user.id}`] = user;
     });
-    restaurants.forEach((restaurant: { [x: string]: string; restaurant_id: string }) => {
-      restaurant["restaurant_imageurl"] = process.env.ServerIP + "/restaurantimage/" + restaurant.restaurant_id + ".jpg";
-      restaurantsMap[`${restaurant.restaurant_id}`] = restaurant;
+    restaurants.forEach((restaurant) => {
+      restaurantsMap[`${restaurant.id}`] = restaurant;
     });
     if (publicReactions) {
       publicReactions.forEach((reaction: { post_id: any }) => {
@@ -266,15 +274,15 @@ class PostController extends ControllerBase {
       });
     }
 
-    let result = posts.map((post: { post_id: { toHexString: () => any }; user_id: string | number; restaurant_id: string | number }) => {
-      let post_id = post.post_id.toHexString();
+    let result = posts.map((post: { id; user_id: string | number; restaurant_id: string | number }) => {
+      let post_id = post.id.toHexString();
       let user = usersMap[post.user_id];
       let restaurant = restaurantsMap[post.restaurant_id];
       let selfReaction = selfReactionsMap[post_id];
       let publicReactions = publicReactionsMap[post_id];
-      if (selfReaction) {
+      /* if (selfReaction) {
         selfReaction = selfReaction;
-      }
+      }*/
       if (publicReactions) {
         publicReactions = publicReactions.reactions;
       }

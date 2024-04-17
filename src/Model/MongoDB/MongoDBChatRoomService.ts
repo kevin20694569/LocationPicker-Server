@@ -4,30 +4,31 @@ import MongoDBMessageService from "./MongoDBMessageService";
 import MySQLUsersTableService from "../MySQL/MySQLUsersTableService";
 
 import MongoDBUserService from "./MongoDBUserService";
-import { ResultSummary, error } from "neo4j-driver";
+import Neo4jFriendShipService from "../Neo4j/Neo4jFriendShipService";
+import { ResultSummary } from "neo4j-driver";
 
 class MongoDBChatRoomService {
   protected chatRoomModel: mongoose.Model<any> = ChatRoomModel;
   protected MessageModel: mongoose.Model<any> = MessageModel;
   protected UserModel: mongoose.Model<any> = UserModel;
+  protected neo4jFriendShipService: Neo4jFriendShipService = new Neo4jFriendShipService();
   protected messageService = new MongoDBMessageService();
   protected userTableSerivice = new MySQLUsersTableService();
   protected mongoDBService = new MongoDBUserService();
 
-  async createRoom(room_id: String, user_ids: Number[]) {
+  async createRoom(user_ids: string[]) {
     try {
-      const filter = { room_id: room_id };
-      const options = { upsert: true };
       let chatroomModel = {
-        room_id: room_id,
-        room_users: user_ids,
+        user_ids: user_ids,
       };
-      let result = await this.chatRoomModel.findOneAndUpdate(filter, chatroomModel, options);
-      await this.mongoDBService.insertRoomIdToUser(user_ids, room_id);
+
+      let result = await this.chatRoomModel.create(chatroomModel);
+      result._doc["room_id"] = result._id;
+      await this.mongoDBService.insertRoomIdToUser(user_ids, result._id);
       return result;
     } catch (error) {
-      console.log(error);
-      throw new Error("創建聊天室失敗");
+      console.log(error.message);
+      throw error;
     }
   }
 
@@ -41,7 +42,7 @@ class MongoDBChatRoomService {
     }
   }
 
-  async getRoomsBySenderidAndRecieveids(sender_id: number, receive_ids: number[]) {
+  async getRoomsBySenderidAndRecieveids(sender_id: string, receive_ids: string[]) {
     try {
       receive_ids = receive_ids.filter((id) => {
         if (id == sender_id) {
@@ -53,7 +54,7 @@ class MongoDBChatRoomService {
         // 第一阶段：筛选出符合条件的文档
         {
           $match: {
-            room_users: {
+            user_ids: {
               $in: [sender_id],
             },
           },
@@ -63,12 +64,12 @@ class MongoDBChatRoomService {
           $addFields: {
             recieve_match: {
               $cond: {
-                if: { $gt: [{ $size: { $setIntersection: [receive_ids, "$room_users"] } }, 0] },
+                if: { $gt: [{ $size: { $setIntersection: [receive_ids, "$user_ids"] } }, 0] },
                 then: 1,
                 else: 0,
               },
             },
-            intersection: { $setIntersection: [receive_ids, "$room_users"] },
+            intersection: { $setIntersection: [receive_ids, "$user_ids"] },
           },
         },
         {
@@ -90,21 +91,19 @@ class MongoDBChatRoomService {
       let intersectionArray = results.map((result) => {
         return result.intersection;
       });
-      const needCreatedChatRoomUseridArray: number[] = receive_ids.filter((id) => !intersectionArray.includes(id));
+
+      const needCreatedChatRoomUseridArray: string[] = receive_ids.filter((id) => !intersectionArray.includes(id));
       let models = needCreatedChatRoomUseridArray.map((userid) => {
         let user_ids = [sender_id, userid];
-        let room_id = this.mergeEachidToRoomID(user_ids);
-
         let chatroomModel = {
-          room_id: room_id,
-          room_users: user_ids,
+          user_ids: user_ids,
         };
         return chatroomModel;
       });
-      for (const model of models) {
-        await this.mongoDBService.insertRoomIdToUser(model.room_users, model.room_id);
-      }
       let newChatRooms = await this.createManyRoom(models);
+      for (const chatRoom of newChatRooms) {
+        await this.mongoDBService.insertRoomIdToUser(chatRoom.room_users, chatRoom._id);
+      }
       newChatRooms.forEach((room) => {
         results.push(room);
       });
@@ -117,18 +116,16 @@ class MongoDBChatRoomService {
 
   async getRoomLastMessageByRoomID(room_id: string) {
     try {
-      let result = await this.chatRoomModel.findOne({
-        room_id: room_id,
-      });
-
+      let obID = new mongoose.Types.ObjectId(room_id);
+      let result = await this.chatRoomModel.findById(obID);
       if (!result) {
-        throw new Error("沒有這個ChatRoom");
+        return null;
       }
       let messages = await this.messageService.getRoomMessage(room_id, new Date(), 1);
       if (messages.length < 1) {
         return {
-          room_id: result.room_id,
-          room_users: result.room_users,
+          room_id: result._id,
+          user_ids: result.user_ids,
           sender_id: null,
           message: null,
         };
@@ -136,15 +133,15 @@ class MongoDBChatRoomService {
       let message = messages[0];
 
       let messageText = message.message;
-      if (message.shared_Post_id) {
+      if (message.shared_post_id) {
         messageText = "分享一則貼文";
       }
       let json = {
         room_id: result.room_id,
-        room_users: result.room_users,
+        user_ids: result.user_ids,
         sender_id: message.sender_id,
         message: messageText,
-        shared_Post_id: message.shared_Post_id,
+        shared_post_id: message.shared_post_id,
         isRead: message.isRead,
         created_time: message.created_time,
       };
@@ -154,108 +151,31 @@ class MongoDBChatRoomService {
     }
   }
 
-  async getRoomByUserEachids(ids: number[]) {
+  async getRoomByUserEachids(user_ids: string[]) {
     try {
-      let room = await this.chatRoomModel.findOne({ room_users: { $all: ids } }, { room_id: 1, room_users: 1 });
+      let room = await this.chatRoomModel.findOne({ user_ids: { $all: user_ids } }, { _id: 1, room_id: "$_id", user_ids: 1 });
       if (room) {
         return room;
       }
-      let room_id = this.mergeEachidToRoomID(ids);
-      room = await this.createRoom(room_id, ids);
+      let results = await this.neo4jFriendShipService.checkUsersAreFriend(user_ids[0], [user_ids[1]]);
+      if (results.length < 1) {
+        throw new Error("彼此無好友關係");
+      }
+      room = await this.createRoom(user_ids);
       return room;
     } catch (error) {
       throw error;
     }
   }
 
-  mergeEachidToRoomID(ids: number[]) {
-    if (ids.length == 1 || ids.length > 2) {
-      throw new Error("聊天室ids merge失敗");
-    }
-    ids = ids.sort((a, b) => a - b);
-    let room_id = ids.join("_");
-    return room_id;
-  }
-
   async getRoomByRoomID(room_id: string) {
-    let room = await this.chatRoomModel.findOne({ room_id: room_id }, { room_id: 1, room_users: 1 });
+    let room = await this.chatRoomModel.findOne({ _id: room_id }, { _id: 0, room_id: "$_id", user_ids: 1 });
     return room;
   }
 
-  async getPreviewsByUserId(user_id: number, date: Date, room_idToExclude: String[]) {
-    try {
-      var user = await this.UserModel.findOne({ user_id: user_id });
-      var chatRoomIds = user.chatRoomIds;
-      var results = await this.MessageModel.aggregate([
-        {
-          $match: {
-            room_id: { $in: chatRoomIds, $nin: room_idToExclude },
-            //created_time: { $lt: date },
-          },
-        },
-        {
-          $group: {
-            _id: "$room_id",
-            messages: {
-              $push: {
-                message: "$message",
-                created_time: "$created_time",
-                shared_Post_id: "$shared_Post_id",
-                shared_User_id: "$shared_User_id",
-                shared_Restaurant_id: "$shared_Restaurant_id",
-                sender_id: "$sender_id",
-                isRead: "$isRead",
-              },
-            },
-            lastMessageTime: { $max: "$created_time" },
-            isRead: { $max: "$isRead" },
-          },
-        },
-        {
-          $sort: {
-            lastMessageTime: -1,
-            isRead: 1,
-            _id: -1,
-          },
-        },
-        { $limit: 15 },
-        {
-          $project: {
-            _id: 0,
-            room_id: "$_id",
-            lastMessage: { $arrayElemAt: ["$messages", -1] }, // 获取 messages 数组中的最后一个元素作为 lastMessage
-            message: "$lastMessage",
-          },
-        },
-        {
-          $addFields: {
-            sender_id: "$lastMessage.sender_id", // 将 sender_id 的值赋给新的字段 senderId
-            created_time: "$lastMessage.created_time",
-            shared_Post_id: "$lastMessage.shared_Post_id",
-            shared_User_id: "$lastMessage.shared_User_id",
-            shared_Restaurant_id: "$lastMessage.shared_Restaurant_id",
-            message: "$lastMessage.message",
-            isRead: "$lastMessage.isRead",
-          },
-        },
-        {
-          $project: {
-            room_id: 1,
-            sender_id: 1,
-            created_time: 1,
-            message: 1,
-            shared_Post_id: 1,
-            shared_User_id: 1,
-            shared_Restaurant_id: 1,
-            isRead: 1,
-          },
-        },
-      ]);
-      return results;
-    } catch (error) {
-      console.log(error);
-      throw new Error("查不到這個Preview");
-    }
+  async getChatRoomsByRoomID(room_ids: string[]) {
+    let rooms = await this.chatRoomModel.find({ _id: { $in: room_ids } }, { _id: 0, room_id: "$_id", user_ids: 1 });
+    return rooms;
   }
 }
 
