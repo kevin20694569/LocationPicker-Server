@@ -63,9 +63,9 @@ class SocketIOSingletonController extends ControllerBase {
         await this.mongodbMessageService.markMessagesAsRead(room_id);
 
         const room = await this.mongodbChatRoomService.getRoomByRoomID(room_id);
-        let room_users = room.user_ids;
+        let user_ids = room.user_ids;
         let roomusersSocketids = [];
-        room_users.forEach((userid) => {
+        user_ids.forEach((userid) => {
           if (this.userToSocketIDArrayDict[userid]) {
             roomusersSocketids.push(this.userToSocketIDArrayDict[userid]);
           }
@@ -74,7 +74,7 @@ class SocketIOSingletonController extends ControllerBase {
           socketidArray.forEach((socket_id: string) => {
             let socket = this.socketIDToSocketDict[socket_id];
             let json = {
-              room_id: room.room_id,
+              room_id: room_id,
             };
             socket.emit("messageIsRead", json);
           });

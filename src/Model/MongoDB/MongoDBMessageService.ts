@@ -41,16 +41,26 @@ class MongoDBMessageService {
           room_id: room_ID,
           sender_id: sender_id,
           created_time: created_time,
-          message: message,
         };
+        let validMessage = false;
+        if (message) {
+          messageModel["message"] = message;
+          validMessage = true;
+        }
         if (shared_post_id) {
           messageModel["shared_post_id"] = shared_post_id;
+          validMessage = true;
         }
         if (shared_user_id) {
           messageModel["shared_user_id"] = shared_user_id;
+          validMessage = true;
         }
         if (shared_restaurant_id) {
           messageModel["shared_restaurant_id"] = shared_restaurant_id;
+          validMessage = true;
+        }
+        if (!validMessage) {
+          throw new Error("無效的訊息");
         }
         insertData.push(messageModel);
       });
@@ -75,7 +85,7 @@ class MongoDBMessageService {
           room_id: 1,
           sender_id: 1,
           message: 1,
-          isRead: 1,
+          isread: 1,
           shared_post_id: 1,
           shared_user_id: 1,
           shared_restaurant_id: 1,
@@ -91,7 +101,7 @@ class MongoDBMessageService {
 
   async markMessagesAsRead(room_id: string) {
     try {
-      const updateResult = await this.messageModel.updateMany({ _id: room_id, isRead: false }, { $set: { isRead: true } });
+      const updateResult = await this.messageModel.updateMany({ room_id: room_id, isread: false }, { $set: { isread: true } });
       return updateResult;
     } catch (error) {
       console.log(error);
@@ -120,17 +130,17 @@ class MongoDBMessageService {
                 shared_user_id: "$shared_user_id",
                 shared_restaurant_id: "$shared_restaurant_id",
                 sender_id: "$sender_id",
-                isRead: "$isRead",
+                isread: "$isread",
               },
             },
             lastMessageTime: { $max: "$created_time" },
-            isRead: { $max: "$isRead" },
+            isread: { $max: "$isread" },
           },
         },
         {
           $sort: {
             lastMessageTime: -1,
-            isRead: 1,
+            isread: 1,
             _id: -1,
           },
         },
@@ -151,7 +161,7 @@ class MongoDBMessageService {
             shared_user_id: "$lastMessage.shared_user_id",
             shared_restaurant_id: "$lastMessage.shared_restaurant_id",
             message: "$lastMessage.message",
-            isRead: "$lastMessage.isRead",
+            isread: "$lastMessage.isread",
           },
         },
         {
@@ -163,7 +173,7 @@ class MongoDBMessageService {
             shared_post_id: 1,
             shared_user_id: 1,
             shared_restaurant_id: 1,
-            isRead: 1,
+            isread: 1,
           },
         },
       ]);

@@ -142,7 +142,7 @@ class MongoDBChatRoomService {
         sender_id: message.sender_id,
         message: messageText,
         shared_post_id: message.shared_post_id,
-        isRead: message.isRead,
+        isread: message.isread,
         created_time: message.created_time,
       };
       return json;
