@@ -12,20 +12,22 @@ class MessageController extends ControllerBase {
         dateObject = new Date(date as string);
       }
 
-      var messages = await this.mongodbMessageService.getRoomMessage(room_id, dateObject, 20);
+      var messages = await this.mongodbMessageService.getRoomMessage(room_id, dateObject, 40);
 
       if (messages.length < 1) {
         res.json([]);
         res.status(200);
         return;
       }
-      await this.mergeMessageData(messages);
-      res.json(messages);
+      let messagesJsonArray = messages.map((message) => {
+        return message._doc;
+      });
+      await this.mergeMessageData(messagesJsonArray);
+      res.json(messagesJsonArray);
       res.status(200);
       return;
     } catch (error) {
       res.status(404).send(error.message);
-      console.log(error);
     } finally {
       res.status(200);
       res.end();
@@ -40,16 +42,17 @@ class MessageController extends ControllerBase {
       if (date) {
         dateObject = new Date(date as string);
       }
-      let chatroom = await this.mongodbChatRoomService.getRoomByUserEachids(user_ids);
-
-      console.log(chatroom);
+      let chatroom = await this.mongodbChatRoomService.getRoomByUserEachids(user_ids, true);
       var messages = await this.mongodbMessageService.getRoomMessage(chatroom._id, dateObject, 20);
       if (messages.length < 1) {
         res.json([]);
         res.status(200);
         return;
       }
-      await this.mergeMessageData(messages);
+      let messagesJsonArray = messages.map((message) => {
+        return message._doc;
+      });
+      await this.mergeMessageData(messagesJsonArray);
 
       res.json(messages);
       res.status(200);
@@ -108,7 +111,7 @@ class MessageController extends ControllerBase {
             let restaurant = restaurantsMap[post.restaurant_id];
 
             messages[indexInMessagesArray] = {
-              ...message._doc,
+              ...message,
               shared_post: post,
               shared_post_restaurant: restaurant,
             };
@@ -117,7 +120,7 @@ class MessageController extends ControllerBase {
             let user_id = message.shared_user_id;
             let user = usersMap[user_id];
             messages[indexInMessagesArray] = {
-              ...message._doc,
+              ...message,
               shared_user: user,
             };
           }
@@ -126,7 +129,7 @@ class MessageController extends ControllerBase {
             let restaurant = restaurantsMap[restaurant_id];
 
             messages[indexInMessagesArray] = {
-              ...message._doc,
+              ...message,
               shared_restaurant: restaurant,
             };
           }

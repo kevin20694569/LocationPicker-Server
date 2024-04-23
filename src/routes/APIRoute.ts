@@ -48,6 +48,7 @@ class ApiRoute extends RouteBase {
     });
     this.router.post("/refact", async (req, res, next) => {
       await this.refactor.standardPlace();
+      await this.refactor.averagePlaceAverage();
       await this.refactor.standardUser();
       res.end();
     });

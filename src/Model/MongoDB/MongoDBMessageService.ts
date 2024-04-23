@@ -94,7 +94,6 @@ class MongoDBMessageService {
 
       return results;
     } catch (error) {
-      console.log(error);
       throw new Error("獲取roomid訊息失敗");
     }
   }
@@ -106,6 +105,90 @@ class MongoDBMessageService {
     } catch (error) {
       console.log(error);
       throw new Error("獲取roomid訊息失敗");
+    }
+  }
+
+  async getChatRoomPreviewMessagesByRequestUserid(user_id: string, date: Date, room_idToExclude: String[]) {
+    try {
+      var user = await this.userModel.findOne({ user_id: user_id });
+      var chatroom_ids = user.chatroom_ids;
+      var results = await this.messageModel.aggregate([
+        {
+          $match: {
+            room_id: { $in: chatroom_ids, $nin: room_idToExclude },
+          },
+        },
+        {
+          $sort: {
+            created_time: -1,
+          },
+        },
+        {
+          $group: {
+            _id: "$room_id",
+            lastMessageTime: { $first: "$created_time" }, // 最后一条消息的时间
+            room_id: { $first: "$room_id" }, // 房间ID
+            messages: { $push: "$$ROOT" }, // 将所有消息保存到 messages 数组中
+          },
+        },
+        {
+          $sort: {
+            lastMessageTime: -1,
+          },
+        },
+        {
+          $limit: 15,
+        },
+        {
+          $project: {
+            _id: 0,
+            room_id: 1,
+            messages: {
+              $slice: ["$messages", 50], // 取每个房间的最后 40 条消息
+            },
+          },
+        },
+      ]);
+      return results;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getChatRoomLastMessagesByRoomID(room_id: string) {
+    try {
+      var messages = await this.messageModel.aggregate([
+        {
+          $match: {
+            room_id: room_id,
+          },
+        },
+        {
+          $sort: {
+            created_time: -1,
+          },
+        },
+        {
+          $limit: 40,
+        },
+        {
+          $project: {
+            _id: 0,
+            room_id: 1,
+            type: "$type",
+            message: "$message",
+            created_time: "$created_time",
+            shared_post_id: "$shared_post_id",
+            shared_user_id: "$shared_user_id",
+            shared_restaurant_id: "$shared_restaurant_id",
+            sender_id: "$sender_id",
+            isread: "$isread",
+          },
+        },
+      ]);
+      return messages;
+    } catch (error) {
+      throw error;
     }
   }
 

@@ -24,13 +24,14 @@ abstract class MySQLTableControllerBase {
   release() {
     if (this.connection) {
       this.connection.release();
+
       this.pool.releaseConnection(this.connection);
     }
   }
   async getConnection() {
     if (!this.connection) {
       try {
-        this.connection = await this.pool.getConnection();
+        //   this.connection = await this.pool.getConnection();
       } catch (error) {
         throw new Error(`mysql伺服器連接失敗 messag${(error as Error).message}`);
       }

@@ -17,7 +17,7 @@ class PostController extends ControllerBase {
         parseFloat(latitude as string),
         parseFloat(distance as string)
       );
-      let json = {};
+      let json = [];
       if (posts.length > 0) {
         json = await this.mergeDataFromPosts(posts, user_id);
       }
@@ -200,7 +200,7 @@ class PostController extends ControllerBase {
   }
 
   public async deletePost(err: Error, req, res: Response, next: NextFunction) {
-    let { socket_id, post_id } = req.json;
+    let { socket_id, post_id } = req.body;
     await this.mongodbPostService.deletePost(post_id);
     req.files.forEach((file: Express.Multer.File) => {
       fs.unlink(file.path, (err) => {
@@ -217,6 +217,8 @@ class PostController extends ControllerBase {
     res.status(500).json({ message: "Internal server error" });
     res.end();
   }
+
+  public async deleteFile(path: String) {}
 
   protected async mergeDataFromPosts(posts: any[], request_user_id: string) {
     if (posts.length < 1) {

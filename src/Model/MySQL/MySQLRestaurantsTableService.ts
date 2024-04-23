@@ -208,7 +208,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let results: any[];
       let fields: any;
 
-      [results, fields] = await this.connection.query(query, params);
+      [results, fields] = await this.pool.query(query, params);
 
       for (const value of results) {
         this.translateBool(value);
@@ -217,7 +217,6 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     } catch (error) {
       throw error;
     } finally {
-      this.pool.releaseConnection(this.connection);
       this.release();
     }
   }

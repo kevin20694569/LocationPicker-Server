@@ -15,7 +15,7 @@ class ChatRoomRoute extends RouteBase {
       this.messageRoute.router(req, res, next);
     });
     this.router.post("/", (req, res, next) => {
-      this.chatRoomController.getChatRoom(req, res, next);
+      this.chatRoomController.getSingleChatRoomPreviewByUserIDs(req, res, next);
     });
   }
 }

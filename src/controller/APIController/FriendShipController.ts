@@ -68,12 +68,21 @@ class FriendShipController extends ControllerBase {
   async getUserFriends(req: Request, res: Response, next: NextFunction) {
     try {
       let target_user_id = req.params.id;
-      let { request_user_id } = req.query;
+      let { request_user_id, date } = req.query;
+
+      let dateObject: Date = new Date();
+      if (date) {
+        date = date as string;
+        dateObject = new Date(date);
+      }
       request_user_id = request_user_id as string;
-      let results = await this.neo4jFriendShipService.searchFriendsByUserID(target_user_id, [request_user_id]);
+      let results = await this.neo4jFriendShipService.searchFriendsByUserID(target_user_id, dateObject, [request_user_id]);
       let ids = results.map((result) => {
         return result.friend.user_id;
       });
+      if (ids.length == 0) {
+        ids.push(request_user_id);
+      }
       let friendNodes = await this.neo4jFriendShipService.checkUsersAreFriend(request_user_id, ids);
       let users = await this.mysqlUsersTableService.getUserByIDs(ids);
       let userMap: object = {};
@@ -84,6 +93,7 @@ class FriendShipController extends ControllerBase {
       for (const friendNode of friendNodes) {
         if (friendNode["friendship"]) {
           friendsMap[friendNode["user"]["user_id"]] = "isFriend";
+
           continue;
         }
         if (friendNode["receiveRequestUser"]) {
@@ -124,6 +134,13 @@ class FriendShipController extends ControllerBase {
       sortedResults.push(...mediumPriorityResults);
       sortedResults.push(...lowPriorityResults);
       sortedResults.push(...lowestPriorityResults);
+      if (sortedResults.length == 0) {
+        userMap[request_user_id] = {
+          user: userMap[request_user_id],
+          friendStatus: "isSelf",
+        };
+        sortedResults.push(userMap[request_user_id]);
+      }
 
       res.json(sortedResults);
     } catch (error) {

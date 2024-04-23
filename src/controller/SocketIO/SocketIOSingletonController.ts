@@ -51,12 +51,12 @@ class SocketIOSingletonController extends ControllerBase {
         this.socketIDToUserDict[socket_id] = user_id;
       });
 
-      socket.on("joinRooms", (data) => {
+      /* socket.on("joinRooms", (data) => {
         let chatroom_ids = data.room_ids;
         chatroom_ids.forEach((id) => {
           socket.join(id);
         });
-      });
+      });*/
 
       socket.on("isRead", async (data) => {
         let room_id = data.room_id;
@@ -86,7 +86,6 @@ class SocketIOSingletonController extends ControllerBase {
           const message = data.message;
           const sender_id = data.sender_id;
           const receive_ids = data.receive_ids;
-          console.log(message, sender_id, receive_ids);
           await this.emitSendMessage(sender_id, receive_ids, message);
         } catch (error) {
           console.log(error);
@@ -205,11 +204,10 @@ class SocketIOSingletonController extends ControllerBase {
           restaurant = await this.mysqlRestaurantsTableService.getrestaurantDistanceAndDetail(post.restaurant_id);
           restaurantMap[post.restaurant_id] = restaurant;
         }
-        message["message"] = "分享了一則貼文";
         message = {
           ...message._doc,
-          sharedPost: post,
-          sharedPostRestaurant: restaurant,
+          shared_post: post,
+          shared_post_restaurant: restaurant,
         };
       } else if (message.shared_user_id) {
         let user;
@@ -221,9 +219,8 @@ class SocketIOSingletonController extends ControllerBase {
         }
         message = {
           ...message._doc,
-          shareduser: user,
+          shared_user: user,
         };
-        message["message"] = "分享了一個帳號";
       } else if (message.shared_restaurant_id) {
         let restaurant;
         if (restaurantMap[message.shared_restaurant_id]) {
@@ -234,9 +231,8 @@ class SocketIOSingletonController extends ControllerBase {
         }
         message = {
           ...message._doc,
-          sharedrestaurant: restaurant,
+          shared_restaurant: restaurant,
         };
-        message["message"] = "分享了一個地點";
       }
 
       let room = roomMap[message.room_id];

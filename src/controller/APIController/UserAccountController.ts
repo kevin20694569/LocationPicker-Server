@@ -65,6 +65,7 @@ class UserAccountController extends ControllerBase {
   async updateUserAccountDetail(req: Request, res: Response, next: NextFunction) {
     try {
       const user_id = req.params.id;
+
       let fileName = await this.uploadMediaController.uploadUserImage(req, res, next);
       const { name, email, password } = req.body;
       let hashPassword: string = null;
@@ -72,6 +73,9 @@ class UserAccountController extends ControllerBase {
         hashPassword = await this.hashPassword(password);
       }
       await this.mysqlUsersTableService.updateUserDetail(user_id, name, email, hashPassword, fileName);
+      let user = await this.mysqlUsersTableService.getUserProfileByID(user_id);
+      console.log(user);
+      res.json(user);
       res.status(200);
     } catch (error) {
       res.status(400);

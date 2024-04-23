@@ -5,7 +5,7 @@ class ChatRoomPreviewRoute extends RouteBase {
 
   protected registerRoute() {
     this.router.post("/lastmessageorder/:id", (req, res, next) => {
-      this.chatRoomController.getChatRoomPreviews(req, res, next);
+      this.chatRoomController.getChatRoomPreviewsWithMessages(req, res, next);
     });
     this.router.get("/:id", (req, res, next) => {
       this.chatRoomController.getSingleChatRoomPreviewByRoomID(req, res, next);

@@ -151,18 +151,23 @@ class MongoDBChatRoomService {
     }
   }
 
-  async getRoomByUserEachids(user_ids: string[]) {
+  async getRoomByUserEachids(user_ids: string[], ifnullToCreate: boolean) {
     try {
       let room = await this.chatRoomModel.findOne({ user_ids: { $all: user_ids } }, { _id: 1, room_id: "$_id", user_ids: 1 });
+
       if (room) {
         return room;
       }
-      let results = await this.neo4jFriendShipService.checkUsersAreFriend(user_ids[0], [user_ids[1]]);
-      if (results.length < 1) {
-        throw new Error("彼此無好友關係");
+      if (ifnullToCreate) {
+        let results = await this.neo4jFriendShipService.checkUsersAreFriend(user_ids[0], [user_ids[1]]);
+        if (results.length < 1) {
+          throw new Error("彼此無好友關係");
+        }
+
+        room = await this.createRoom(user_ids);
+        return room;
       }
-      room = await this.createRoom(user_ids);
-      return room;
+      return null;
     } catch (error) {
       throw error;
     }

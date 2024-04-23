@@ -74,7 +74,7 @@ class Neo4jFriendShipService {
       WITH user1, user2, request
       WHERE id(request) = $friend_request_id
       WITH user1, user2, request
-      CREATE (user1)-[:USER1]->(friendship:Friendship {friendship_time: apoc.date.toISO8601(datetime().epochMillis, "ms")})-[:USER2]->(user2)
+      CREATE (user1)-[:USER1]->(friendship:Friendship {created_time: apoc.date.toISO8601(datetime().epochMillis, "ms")})-[:USER2]->(user2)
       WITH request, friendship
       DETACH DELETE request
       return friendship;
@@ -105,7 +105,7 @@ class Neo4jFriendShipService {
       OPTIONAL MATCH (user1)-[:SENT_FRIEND_REQUEST]->(request:FriendRequest)-[:TO_USER]->(user2)
       WITH user1, user2, request
       WHERE request IS NOT NULL
-      CREATE (user1)-[:USER1]->(friendship:Friendship {friendship_time: apoc.date.toISO8601(datetime().epochMillis, "ms")})-[:USER2]->(user2)
+      CREATE (user1)-[:USER1]->(friendship:Friendship {created_time: apoc.date.toISO8601(datetime().epochMillis, "ms")})-[:USER2]->(user2)
       DETACH DELETE request
       RETURN friendship;
       `;
@@ -126,18 +126,34 @@ class Neo4jFriendShipService {
     }
   }
 
-  async searchFriendsByUserID(user_id: string, excluded_user_id?: [string]): Promise<any[]> {
+  async searchFriendsByUserID(user_id: string, dateLimit?: Date, excluded_user_id?: [string]): Promise<any[]> {
     try {
       if (!excluded_user_id) {
         excluded_user_id = null;
       }
+
       let query = `
       MATCH (u:User)-[*1]-(friendship:Friendship)-[*1]-(friend:User)
       WHERE u.user_id = $user_id
       AND ($excluded_user_id IS NULL OR NOT friend.user_id IN $excluded_user_id)
-      RETURN friendship, friend
       `;
-      let results = await this.session.run(query, { user_id, excluded_user_id });
+
+      let dateLimitISOString;
+
+      if (dateLimit) {
+        dateLimitISOString = dateLimit.toISOString();
+        let whereLimitQuery = ` AND friendship.created_time < $dateLimitISOString`;
+        query += whereLimitQuery;
+      }
+      let returnQuery = ` RETURN friendship, friend`;
+      query += returnQuery;
+      if (dateLimit) {
+        let limitQuery = ` ORDER BY friendship.created_time LIMIT 20`;
+        query += limitQuery;
+      }
+
+      query += `;`;
+      let results = await this.session.run(query, { user_id, dateLimitISOString, excluded_user_id });
       let objects = this.transFormToJSONNeo4jResults(results);
       return objects;
     } catch (error) {
@@ -199,9 +215,8 @@ class Neo4jFriendShipService {
       ORDER BY f.sent_time DESC;`;
       let results = await this.session.run(query, { user_id, date });
       if (results.records.length <= 0) {
-        throw new Error("沒有任何邀請");
+        return [];
       }
-
       let objects = this.transFormToJSONNeo4jResults(results);
       return objects;
     } catch (error) {
