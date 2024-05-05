@@ -4,6 +4,10 @@
  * Module dependencies.
  */
 import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, "../../" + `${process.env.NODE_ENV}.env`) });
 import SocketIOSingletonController from "../controller/SocketIO/SocketIOSingletonController";
 
 var app = require("../app");

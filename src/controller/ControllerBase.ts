@@ -1,4 +1,3 @@
-import "dotenv/config";
 import Neo4jFriendShipService from "../Model/Neo4j/Neo4jFriendShipService";
 
 import MySQLUsersTableService from "../Model/MySQL/MySQLUsersTableService";
@@ -11,7 +10,6 @@ import MongoDBChatRoomService from "../Model/MongoDB/MongoDBChatRoomService";
 import MongoDBMessageService from "../Model/MongoDB/MongoDBMessageService";
 import MongoDBUserService from "../Model/MongoDB/MongoDBUserService";
 import UploadMediaController from "./ResourceController/UploadMediaController";
-
 abstract class ControllerBase {
   protected mysqlUsersTableService: MySQLUsersTableService = new MySQLUsersTableService();
   protected mysqlRestaurantsTableService: MySQLRestaurantsTableService = new MySQLRestaurantsTableService();

@@ -6,6 +6,7 @@ class NearLocationRoute extends RouteBase {
     this.router.get("/", (req, res, next) => {
       this.postController.getNearLocationPostsWithPublic(req, res, next);
     });
+
     this.router.get("/friendsbynearlocation", (req, res, next) => {
       this.postController.getNearLocationPostsWithFriends(req, res, next);
     });

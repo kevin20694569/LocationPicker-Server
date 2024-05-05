@@ -23,6 +23,7 @@ class MongoDBPostService {
 
       return postmodel;
     } catch (error) {
+      console.log(error);
       throw new Error("新建貼文失敗");
     }
   }

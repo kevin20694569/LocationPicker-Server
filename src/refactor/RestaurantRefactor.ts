@@ -6,7 +6,6 @@ import SocketIOSingletonController from "../controller/SocketIO/SocketIOSingleto
 import MongoDBPostService from "../Model/MongoDB/MongoDBPostService";
 import MongoDB from "../Model/MongoDB/MongoDB";
 import Neo4jFriendShipService from "../Model/Neo4j/Neo4jFriendShipService";
-import "dotenv/config";
 import { UserModel } from "../Model/MongoDB/MongoDBModel";
 import MongoDBUserService from "src/Model/MongoDB/MongoDBUserService";
 class Refactor {
@@ -34,14 +33,13 @@ class Refactor {
       let newInit = 0;
       for (let i = 0; i < place_ids.length; i++) {
         let id = place_ids[i];
-        if (id != "ChIJ41wbgbqrQjQR75mxQgbywys") {
-          // continue;
-        }
-        // let restaurant = await googleMapService.searchPlaceByID(id);
+        if (id == "ChIJJXNJjQqpQjQR-UfWtMFthwI") {
+          let restaurant = await this.googleMapAPIService.searchPlaceByID(id);
 
-        //  await restaurantTable.updateRestaurant(restaurant);
-        //  await insertBusinessTime(restaurant);
+          await this.restaurantTableService.updateRestaurant(restaurant);
+        }
         await this.updateRestaurantPostsCount(id);
+
         newInit += 1;
         console.log(`${id}正規完成`);
       }

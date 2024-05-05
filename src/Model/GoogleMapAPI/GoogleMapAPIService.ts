@@ -1,6 +1,5 @@
 import axios from "axios";
 import fs from "fs";
-import "dotenv/config";
 import path from "path";
 import uploadMediaController from "../../controller/ResourceController/UploadMediaController";
 

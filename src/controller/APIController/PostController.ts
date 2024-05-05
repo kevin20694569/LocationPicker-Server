@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction, query, request } from "express";
 import ControllerBase from "../ControllerBase";
 import fs from "fs";
-import "dotenv/config";
 import mongoose from "mongoose";
 import multer, { Multer } from "multer";
 
@@ -22,6 +21,7 @@ class PostController extends ControllerBase {
         json = await this.mergeDataFromPosts(posts, user_id);
       }
       res.json(json);
+
       res.status(200);
     } catch (error) {
       console.log(error);

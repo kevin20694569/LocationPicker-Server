@@ -1,5 +1,4 @@
 import mysql from "mysql2/promise";
-import "dotenv/config";
 abstract class MySQLTableControllerBase {
   private dbPassword: string = process.env.mysql_dbpassword as string;
   protected serverIP: string = process.env.serverip as string;

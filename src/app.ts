@@ -15,7 +15,7 @@ app.use(logger("dev"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
-console.log(path.join(__dirname, "../public"));
+
 app.use("/restaurantimage", express.static(path.join(__dirname, "../public/media/restaurantimage")));
 app.use("/userimage", express.static(path.join(__dirname, "../public/media/userimage")));
 app.use("/media", express.static(path.join(__dirname, "../public/media/postmedia")));

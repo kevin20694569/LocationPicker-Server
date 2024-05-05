@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import ControllerBase from "../ControllerBase";
-import "dotenv/config";
 
 class UserController extends ControllerBase {
   async getUserProfile(req: Request, res: Response, next: NextFunction) {

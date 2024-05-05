@@ -5,7 +5,6 @@ import RestaurantRoute from "./RestaurantRoute/RestaurantRoute";
 import ReactionRoute from "./ReactionRoute/ReactionRoute";
 import FriendRoute from "./FriendRoute/FriendRoute";
 import ChatRoomRoute from "./ChatRoomRoute/ChatRoomRoute";
-import "dotenv/config";
 import jwt from "jsonwebtoken";
 import UserAccountRoute from "./UserAccountRoute/UserAccountRoute";
 import Refactor from "../refactor/RestaurantRefactor";

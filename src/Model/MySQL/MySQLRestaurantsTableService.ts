@@ -35,9 +35,9 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
 
         await this.business_TimeService.insertBusinessTime(place_id, opening_hours);
         restaurantDetail = {
-          restaurant_id: place_id,
-          restaurant_latitude: lat,
-          restaurant_longitude: lng,
+          id: place_id,
+          latitude: lat,
+          longitude: lng,
         };
       } else {
         restaurantDetail = results[0];
@@ -131,7 +131,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     }
   }
 
-  async createnewrestaurant(restaurant, grade: Number) {
+  async createnewrestaurant(restaurant, grade: number) {
     let { place_id, name, formatted_address, lat, lng, takeout, reservable, price_level, website, formatted_phone_number } = restaurant;
     try {
       await this.getConnection();
@@ -148,7 +148,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     }
   }
 
-  async deleteRestaurant(place_id: String) {
+  async deleteRestaurant(place_id: string) {
     try {
       await this.getConnection();
       let query = `DELETE FROM restaurants WHERE id = ?;`;
@@ -164,7 +164,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     }
   }
 
-  async getRestaurantsDetail(restaurant_Ids: String[]) {
+  async getRestaurantsDetail(restaurant_Ids: string[]) {
     try {
       if (restaurant_Ids.length < 1) {
         return [];
@@ -186,7 +186,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     }
   }
 
-  async getnearlocactionRestaurants(latitude: Number, longitude: Number, offset: Number, lastrestaurantid: String, limit: Number) {
+  async getnearlocactionRestaurants(latitude: number, longitude: number, offset: number, lastrestaurantid: string, limit: number) {
     try {
       await this.getConnection();
       let query = `select *,
@@ -254,7 +254,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   }
 
   translateBool(restaurant) {
-    if (restaurant.reservable != null) {
+    if (restaurant.reservable) {
       restaurant.reservable = restaurant.reservable == 1 ? true : false;
     }
     if (restaurant.takeout) {

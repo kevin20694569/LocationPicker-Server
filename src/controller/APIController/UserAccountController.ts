@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import ControllerBase from "../ControllerBase";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import "dotenv/config";
 import { nanoid } from "nanoid";
 import nodemailer from "nodemailer";
 class UserAccountController extends ControllerBase {
