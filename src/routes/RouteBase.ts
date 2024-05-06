@@ -1,7 +1,9 @@
 import { Router } from "express";
+import multer, { Multer } from "multer";
 
 class RouteBase {
   public router = Router();
+  protected multer: Multer = multer();
 
   constructor() {
     this.initial();

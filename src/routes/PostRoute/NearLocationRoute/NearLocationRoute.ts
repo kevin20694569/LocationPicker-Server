@@ -1,15 +1,12 @@
 import RouteBase from "../../RouteBase";
 import PostController from "../../../controller/APIController/PostController";
 class NearLocationRoute extends RouteBase {
-  protected postController: PostController = new PostController();
+  protected postController: PostController;
   protected registerRoute() {
-    this.router.get("/", (req, res, next) => {
-      this.postController.getNearLocationPostsWithPublic(req, res, next);
-    });
+    this.postController = new PostController();
+    this.router.get("/", this.postController.getNearLocationPostsWithPublic);
 
-    this.router.get("/friendsbynearlocation", (req, res, next) => {
-      this.postController.getNearLocationPostsWithFriends(req, res, next);
-    });
+    this.router.get("/friendsbynearlocation", this.postController.getNearLocationPostsWithFriends);
   }
 }
 

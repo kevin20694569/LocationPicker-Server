@@ -9,7 +9,8 @@ import MongoDBBusiness_TimeService from "../Model/MongoDB/MongoDBBusinessTimeSer
 import MongoDBChatRoomService from "../Model/MongoDB/MongoDBChatRoomService";
 import MongoDBMessageService from "../Model/MongoDB/MongoDBMessageService";
 import MongoDBUserService from "../Model/MongoDB/MongoDBUserService";
-import UploadMediaController from "./ResourceController/UploadMediaController";
+import MediaResourceController from "./ResourceController/UploadMediaController";
+import multer, { Multer } from "multer";
 abstract class ControllerBase {
   protected mysqlUsersTableService: MySQLUsersTableService = new MySQLUsersTableService();
   protected mysqlRestaurantsTableService: MySQLRestaurantsTableService = new MySQLRestaurantsTableService();
@@ -23,7 +24,9 @@ abstract class ControllerBase {
   protected mongodbMessageService: MongoDBMessageService = new MongoDBMessageService();
   protected neo4jFriendShipService: Neo4jFriendShipService = new Neo4jFriendShipService();
 
-  protected uploadMediaController: UploadMediaController = new UploadMediaController();
+  protected mediaResourceController: MediaResourceController = new MediaResourceController();
+
+  protected multer: Multer = multer();
 
   protected serverIP?: string = process.env.serverip;
 }

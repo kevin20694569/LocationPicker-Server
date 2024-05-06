@@ -9,10 +9,10 @@ class UserAccountRoute extends RouteBase {
       this.userAccountController.login(req, res, next);
     });
 
-    this.router.post("/register", (req, res, next) => {
+    this.router.post("/register", this.multer.fields([{ name: "userimage" }]), (req, res, next) => {
       this.userAccountController.register(req, res, next);
     });
-    this.router.put("/:id", (req, res, next) => {
+    this.router.put("/:id", this.multer.fields([{ name: "userimage" }]), (req, res, next) => {
       this.userAccountController.updateUserAccountDetail(req, res, next);
     });
   }

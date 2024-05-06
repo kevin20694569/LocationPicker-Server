@@ -61,12 +61,12 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
     }
   }
 
-  async updateRestaurantAverage_GradeWithInputGrade(restaurant_id: String, input_grade: Number) {
+  async updateRestaurantAverage_GradeWithInputGrade(restaurant_id: String, input_grade: Number, plusPostCount: number) {
     await this.getConnection();
     let query = `UPDATE restaurants
-    SET average_grade = (average_grade * posts_count + ?) / (posts_count + 1)
+    SET average_grade = (average_grade * posts_count + ?) / (posts_count + ?)
     WHERE id = ?;`;
-    let params = [input_grade, restaurant_id];
+    let params = [input_grade, plusPostCount, restaurant_id];
     let results: any[];
     let fields: any;
     [results, fields] = await this.pool.query(query, params);
@@ -138,7 +138,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
       let query = `insert into restaurants (id, name, address, latitude, longitude, average_grade, posts_count, takeout, reservable, price_level, website, formatted_phone_number) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`;
       let results: any[];
       let fields: any;
-      let params = [place_id, name, formatted_address, lat, lng, grade, 1, takeout, reservable, price_level, website, formatted_phone_number];
+      let params = [place_id, name, formatted_address, lat, lng, grade, 0, takeout, reservable, price_level, website, formatted_phone_number];
       [results, fields] = await this.pool.query(query, params);
       return [results, fields];
     } catch (error) {

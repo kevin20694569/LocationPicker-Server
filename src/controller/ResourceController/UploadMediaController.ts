@@ -5,9 +5,12 @@ import { NextFunction, Request, Response } from "express";
 import multer, { Multer, diskStorage, StorageEngine, FileFilterCallback } from "multer";
 import { nanoid } from "nanoid";
 import SocketIOSingletonController from "../../controller/SocketIO/SocketIOSingletonController";
-import { ProfiledPlan } from "neo4j-driver";
+import { buffer } from "stream/consumers";
+
+import { ProfiledPlan, error } from "neo4j-driver";
 import { JsonWebTokenError } from "jsonwebtoken";
-class UploadMediaController {
+class MediaResourceController {
+  multer: Multer = multer();
   protected postStorage: StorageEngine = diskStorage({
     destination: function (req: Request, file: Express.Multer.File, cb) {
       const postMediaFolder = path.resolve(__dirname, "../../../public/media/postmedia");
@@ -72,59 +75,67 @@ class UploadMediaController {
     },
   });
 
-  async uploadRestaurantImage(restaurant_id: string, data: any): Promise<void> {
-    let filename: String = `${restaurant_id}.jpg`;
-
-    const filePath = path.resolve(__dirname, `../../../public/media/restaurantimage/${filename}`);
+  async uploadRestaurantImage(data: any, restaurant_id: string): Promise<string> {
+    const filePath = path.resolve(__dirname, `../../../public/media/restaurantimage/${restaurant_id}.jpg`);
     const writer = fs.createWriteStream(filePath);
     data.pipe(writer);
-    return await new Promise((resolve, reject) => {
-      writer.on("finish", resolve);
+    return await new Promise<string>((resolve, reject) => {
+      writer.on("finish", () => {
+        resolve(filePath);
+      });
+      writer.on("error", (err) => {
+        reject(err);
+      });
+    });
+  }
+
+  uploadUserImage = async (buffer: Buffer, fileName: string) => {
+    let filePath = path.resolve(__dirname, `../../../public/media/userimage/${fileName}.jpg`);
+    const writer = fs.createWriteStream(filePath);
+    writer.write(buffer, (err) => {
+      if (err) {
+        throw err;
+      } else {
+        writer.end();
+      }
+    });
+    return await new Promise<string>((resolve, reject) => {
+      writer.on("finish", () => {
+        resolve(filePath);
+      });
+      writer.on("error", (err) => {
+        reject(err);
+      });
+    });
+  };
+
+  uploadPostMedia = async (buffer: Buffer, fileName: string): Promise<string> => {
+    let filePath = path.resolve(__dirname, `../../../public/media/postmedia/${fileName}`);
+    const writer = fs.createWriteStream(filePath);
+    writer.write(buffer, (err) => {
+      if (err) {
+        throw err;
+      } else {
+        writer.end();
+      }
+    });
+    return await new Promise<string>((resolve, reject) => {
+      writer.on("finish", () => {
+        resolve(filePath);
+      });
       writer.on("error", reject);
     });
-  }
+  };
 
-  async uploadPosts(req: Request, res: Response, next: NextFunction) {
-    const progress = progressStream({ length: "0" });
-    req.pipe(progress);
-    progress.headers = req.headers;
-    progress.body = req.body;
-    await new Promise<void>((resolve, reject) => {
-      this.postUpload.none()(req, res, (err) => {
-        let { socket_id } = req.body;
-        if (socket_id) {
-          (req as any).ioService = new SocketIOSingletonController();
-          progress.on("progress", function (obj) {
-            (req as any).ioService.emitUploadProgressToSocket(socket_id, obj.percentage);
-          });
-        }
-        this.postUpload.fields([{ name: "media" }])(progress, res, (err) => {
-          req.files = progress.files.media;
-          if (err) {
-            reject(err);
-          }
-          resolve();
-        });
-      });
+  deletePostMedia = async (fileName: string) => {
+    let filePath = path.resolve(__dirname, `../../../public/media/postmedia/${fileName}`);
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error("刪除檔案出錯：", err);
+        return;
+      }
     });
-  }
-  // uploadUserImage(file : Multer)
-
-  uploadUserImage(req: Request, res: Response, next: NextFunction) {
-    return new Promise<string>((resolve, reject) => {
-      this.userImageUpload.single("userimage")(req, res, (err: any) => {
-        if (err) {
-          reject(err);
-        } else {
-          if (req.file) {
-            resolve(req.file.filename);
-          } else {
-            resolve(null);
-          }
-        }
-      });
-    });
-  }
+  };
 }
 
-export default UploadMediaController;
+export default MediaResourceController;

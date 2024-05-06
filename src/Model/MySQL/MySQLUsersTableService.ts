@@ -3,7 +3,7 @@ import MySQLTableControllerBase from "./MySQLTableServiceBase";
 import { ResultSetHeader } from "mysql2";
 class MySQLUsersTableService extends MySQLTableControllerBase {
   protected serverUserImageIP = this.serverIP + "/userimage/";
-  protected selectString: string = `CONCAT( "${this.serverUserImageIP}" , imageid) as user_imageurl, NULL AS password`;
+  protected selectString: string = `CONCAT( "${this.serverUserImageIP}" , imageid, ".jpg") as user_imageurl, NULL AS password`;
   constructor(password?: string) {
     super(password);
   }

@@ -6,7 +6,7 @@ class MongoDBPostService {
   protected standardPostProjectOutput = StandardPostProjectOutput;
   protected randomPostProjectOutput = RandomPostProjectOutput;
 
-  async insertPost(title: string, content: string, media: [any], user_id: string, location: any, restaurant_id: string, grade: number) {
+  async insertPost(title: string, content: string, media: any[], user_id: string, location: any, restaurant_id: string, grade: number) {
     try {
       let postmodel = new this.postModel({
         title: title,
@@ -238,8 +238,31 @@ class MongoDBPostService {
 
   async deletePost(post_id: string) {
     let objectID = new mongoose.Types.ObjectId(post_id);
-    const post = await this.postModel.deleteOne(objectID);
+    const filter = { _id: objectID };
+    const options = {
+      returnOriginal: true,
+    };
+    const deletedPost = await this.postModel.findOneAndDelete(filter, options);
+    return deletedPost;
   }
+
+  updatePost = async (post_id: string, title?: string, content?: string, grade?: number) => {
+    let objectID = new mongoose.Types.ObjectId(post_id);
+
+    let set: { title?: string; content?: string; grade?: number } = {};
+    if (title) {
+      set.title = title;
+    }
+    if (content) {
+      set.content = content;
+    }
+    if (grade) {
+      set.grade = grade;
+    }
+    const update = { $set: set };
+    const originalPost = await this.postModel.findByIdAndUpdate(objectID, update);
+    return originalPost;
+  };
 
   async calculateRestaurantAverage() {
     const result = await this.postModel.aggregate([

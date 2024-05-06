@@ -1,6 +1,4 @@
 import axios from "axios";
-import fs from "fs";
-import path from "path";
 import uploadMediaController from "../../controller/ResourceController/UploadMediaController";
 
 interface GoogleMapTextSearchQuery {}
@@ -72,7 +70,7 @@ class GoogleMapAPIService {
       },
     });
 
-    return await this.uploadMediaController.uploadRestaurantImage(restaurant_id, response.data);
+    return await this.uploadMediaController.uploadRestaurantImage(response.data, restaurant_id);
   }
 }
 

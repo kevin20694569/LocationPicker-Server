@@ -163,6 +163,11 @@ class MongoDBReactionService {
     }
   }
 
+  deletePostAllReactions = async (post_id: string) => {
+    let reactions = await this.reactionModel.deleteMany({ post_id: post_id });
+    return reactions;
+  };
+
   translateReactionToString(rawValue: number) {
     switch (rawValue) {
       case 0:

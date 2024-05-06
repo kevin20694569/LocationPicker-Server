@@ -1,13 +1,16 @@
 import { Request, Response, NextFunction, query, request } from "express";
+import progressStream from "progress-stream";
 import ControllerBase from "../ControllerBase";
 import fs from "fs";
 import mongoose from "mongoose";
-import multer, { Multer } from "multer";
+import SocketIOSingletonController from "../SocketIO/SocketIOSingletonController";
+import { nanoid } from "nanoid";
+import { error } from "neo4j-driver";
 
 class PostController extends ControllerBase {
   protected postMediaFolderString = "/public/media";
 
-  public async getNearLocationPostsWithPublic(req: Request, res: Response, next: NextFunction) {
+  getNearLocationPostsWithPublic = async (req: Request, res: Response, next: NextFunction) => {
     let { latitude, longitude, distance, user_id } = req.query;
     user_id = user_id as string;
     try {
@@ -30,9 +33,9 @@ class PostController extends ControllerBase {
     } finally {
       res.end();
     }
-  }
+  };
 
-  public async getRestaurantPosts(req, res: Response, next: NextFunction) {
+  getRestaurantPosts = async (req, res: Response, next: NextFunction) => {
     try {
       let restaurant_id = req.params.id;
       let { date, user_id } = req.query;
@@ -52,9 +55,9 @@ class PostController extends ControllerBase {
     } finally {
       res.end();
     }
-  }
+  };
 
-  public async getNearLocationPostsWithFriends(req, res: Response, next: NextFunction) {
+  getNearLocationPostsWithFriends = async (req, res: Response, next: NextFunction) => {
     let { latitude, longitude, distance, request_user_id } = req.query;
     if (!distance) {
       distance = 0;
@@ -84,9 +87,9 @@ class PostController extends ControllerBase {
       res.send(error.message);
       res.end();
     }
-  }
+  };
 
-  public async getFriendsPostsOrderByTime(req: Request, res: Response, next: NextFunction) {
+  getFriendsPostsOrderByTime = async (req: Request, res: Response, next: NextFunction) => {
     try {
       let { latitude, longitude, date, request_user_id } = req.query;
       request_user_id = request_user_id as string;
@@ -115,9 +118,9 @@ class PostController extends ControllerBase {
     } finally {
       res.end();
     }
-  }
+  };
 
-  public async getUserPosts(req, res: Response, next: NextFunction) {
+  getUserPosts = async (req, res: Response, next: NextFunction) => {
     try {
       let user_id = req.params.id;
       let { date, request_user_id } = req.query;
@@ -133,9 +136,9 @@ class PostController extends ControllerBase {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  public async getSinglePost(req: Request, res: Response, next: NextFunction) {
+  getSinglePost = async (req: Request, res: Response, next: NextFunction) => {
     try {
       let id = req.params.id;
       let { request_user_id } = req.query;
@@ -150,22 +153,48 @@ class PostController extends ControllerBase {
     } finally {
       res.end();
     }
-  }
+  };
 
-  public async uploadPost(req, res: Response, next: NextFunction) {
+  uploadPost = async (req, res: Response, next: NextFunction) => {
     try {
+      let progress = progressStream({ length: "0" });
+      req.pipe(progress);
+      progress.headers = req.headers;
+      progress.body = req.body;
+
       let { user_id, title, content, media_titles, restaurant_id, grade, socket_id } = req.body;
+      if (socket_id) {
+        (req as any).ioService = new SocketIOSingletonController();
+        progress.on("progress", function (obj) {
+          (req as any).ioService.emitUploadProgressToSocket(socket_id, obj.percentage);
+        });
+      }
+      if (req.files == undefined) {
+        throw new Error("沒有選擇檔案上傳");
+      }
       let media_titles_array: string[] = media_titles;
       if (typeof media_titles === "string") {
         media_titles_array = JSON.parse(media_titles);
       }
+      let mediaModel = new Array().fill(null);
       let { latitude, longitude } = await this.mysqlRestaurantsTableService.findRestaurantID(restaurant_id, grade);
-      let files = req.files;
-      if (files == undefined) {
-        throw new Error("沒有選擇檔案上傳");
-      }
-      let media = files.map((file: Express.Multer.File, index: number) => {
-        const filename = `${file.filename}`;
+      const location = {
+        type: "Point",
+        coordinates: [longitude, latitude],
+      };
+      let medias = req.files.media as Express.Multer.File[];
+      for (let [index, media] of medias.entries()) {
+        const id = nanoid();
+        const mimeType = media.mimetype;
+        let ext = "";
+        if (mimeType.startsWith("image/")) {
+          ext = ".jpg";
+        } else if (mimeType.startsWith("video/")) {
+          ext = ".mp4";
+        }
+        let filename = id + ext;
+        let filePath = await this.mediaResourceController.uploadPostMedia(media.buffer, filename);
+        media.path = filePath;
         if (media_titles_array[index] == "") {
           media_titles_array[index] = null;
         }
@@ -175,16 +204,11 @@ class PostController extends ControllerBase {
           title: media_titles_array[index],
           _id: null,
         };
-        return model;
-      });
+        mediaModel[index] = model;
+      }
 
-      const location = {
-        type: "Point",
-        coordinates: [longitude, latitude],
-      };
-
-      await this.mongodbPostService.insertPost(title, content, media, user_id, location, restaurant_id, grade);
-      await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, grade as number);
+      await this.mongodbPostService.insertPost(title, content, mediaModel, user_id, location, restaurant_id, grade);
+      await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, grade as number, 1);
       await this.mysqlRestaurantsTableService.updateRestaurantPostsCountWithInput(restaurant_id, 1);
       await this.mysqlUsersTableService.modifyUserPostsCount(user_id, 1);
       if (req.ioService) {
@@ -192,33 +216,61 @@ class PostController extends ControllerBase {
       }
       res.status(200).json("上傳成功");
     } catch (error) {
-      console.log(error);
-      await this.deletePost(error, req, res, next);
+      let { socket_id, post_id } = req.body;
+      await this.mongodbPostService.deletePost(post_id);
+      for (let media of req.files.media) {
+        await this.mediaResourceController.deletePostMedia(media.path);
+      }
+      res.send("上傳Post錯誤");
     } finally {
       res.end();
     }
-  }
+  };
 
-  public async deletePost(err: Error, req, res: Response, next: NextFunction) {
-    let { socket_id, post_id } = req.body;
-    await this.mongodbPostService.deletePost(post_id);
-    req.files.forEach((file: Express.Multer.File) => {
-      fs.unlink(file.path, (err) => {
-        if (err) {
-          console.error("刪除檔案出錯：", err);
-          return;
-        }
-        console.log("檔案刪除成功");
-      });
-    });
-    if (req.ioService) {
-      req.ioService.emitUploadTaskFinished(socket_id, false);
+  public updatePost = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let post_id = req.params.id;
+      let { title, content, grade } = req.body;
+      let originalPost = await this.mongodbPostService.updatePost(post_id, title, content, grade);
+
+      if (grade) {
+        let restaurant_id = originalPost.restaurant_id;
+        let gradeGap = grade - originalPost.grade;
+        await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, gradeGap, 0);
+      }
+      res.send(originalPost);
+    } catch (err) {
+      res.send({ error: err });
+    } finally {
+      res.end();
     }
-    res.status(500).json({ message: "Internal server error" });
-    res.end();
-  }
+  };
 
-  public async deleteFile(path: String) {}
+  public deletePost = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let post_id = req.params.id;
+      let posts = await this.mongodbPostService.getPostFromID(post_id);
+      let post = posts[0];
+      let restaurant_id = post.restaurant_id;
+      let user_id = post.user_id;
+
+      let deletedPost = await this.mongodbPostService.deletePost(post_id);
+      await this.mysqlRestaurantsTableService.updateRestaurantPostsCountWithInput(restaurant_id, -1);
+      await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, -deletedPost.grade, -1);
+      await this.mysqlUsersTableService.modifyUserPostsCount(user_id, -1);
+      await this.mongodbReactionService.deletePostAllReactions(post_id);
+      for (const media of post.media) {
+        let resource_id = media.resource_id;
+        await this.mediaResourceController.deletePostMedia(resource_id);
+      }
+    } catch (err) {
+      console.log(err);
+      res.status(404);
+      res.send({ error: err });
+    } finally {
+      res.end();
+    }
+  };
 
   protected async mergeDataFromPosts(posts: any[], request_user_id: string) {
     if (posts.length < 1) {

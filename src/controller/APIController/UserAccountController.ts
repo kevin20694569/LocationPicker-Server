@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { nanoid } from "nanoid";
 import nodemailer from "nodemailer";
+import multer, { Multer } from "multer";
 class UserAccountController extends ControllerBase {
   private key = process.env.jwtKey;
   async login(req: Request, res: Response, next: NextFunction) {
@@ -34,7 +35,14 @@ class UserAccountController extends ControllerBase {
   }
 
   async register(req: Request, res: Response, next: NextFunction) {
-    let imageid = await this.uploadMediaController.uploadUserImage(req, res, next);
+    let files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    let user_id = nanoid();
+    let imageFile = files.userimage[0];
+    let imageFileName = "userimage-" + nanoid();
+
+    if (imageFile) {
+      let filePath = await this.mediaResourceController.uploadUserImage(imageFile.buffer, imageFileName);
+    }
     const { username, email, password } = req.body;
 
     try {
@@ -44,8 +52,8 @@ class UserAccountController extends ControllerBase {
         return;
       }
       const hashPassword = await this.hashPassword(password);
-      let user_id = nanoid();
-      let header = await this.mysqlUsersTableService.insertuser(user_id, username, email, hashPassword, imageid);
+
+      let header = await this.mysqlUsersTableService.insertuser(user_id, username, email, hashPassword, imageFileName);
       if (header.affectedRows != 1 && header.serverStatus != 2) {
         throw new Error("mysql新建userError");
       }
@@ -64,16 +72,21 @@ class UserAccountController extends ControllerBase {
   async updateUserAccountDetail(req: Request, res: Response, next: NextFunction) {
     try {
       const user_id = req.params.id;
-
-      let fileName = await this.uploadMediaController.uploadUserImage(req, res, next);
-      const { name, email, password } = req.body;
-      let hashPassword: string = null;
-      if (password) {
-        hashPassword = await this.hashPassword(password);
+      let files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      let imageFile = files.userimage[0];
+      let fileName: string;
+      if (imageFile) {
+        fileName = "userimage-" + nanoid();
+        let filePath = await this.mediaResourceController.uploadUserImage(imageFile.buffer, fileName);
       }
-      await this.mysqlUsersTableService.updateUserDetail(user_id, name, email, hashPassword, fileName);
+
+      const { name, email, password } = req.body;
+      let hashedPassword: string = null;
+      if (password) {
+        hashedPassword = await this.hashPassword(password);
+      }
+      await this.mysqlUsersTableService.updateUserDetail(user_id, name, email, hashedPassword, fileName);
       let user = await this.mysqlUsersTableService.getUserProfileByID(user_id);
-      console.log(user);
       res.json(user);
       res.status(200);
     } catch (error) {
