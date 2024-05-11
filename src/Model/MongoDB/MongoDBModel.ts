@@ -30,6 +30,7 @@ let StandardPostProjectOutput: Object = {
   created_at: "$created_at",
   reactions: "$reactions",
   grade: "$grade",
+  isdeleted: "$isdeleted",
 };
 
 let RandomPostProjectOutput = {
@@ -55,6 +56,7 @@ let RandomPostProjectOutput = {
   created_at: "$randomPost.created_at",
   reactions: "$randomPost.reactions",
   grade: "$randomPost.grade",
+  isdeleted: "$randomPost.isdeleted",
 };
 
 let ReactionProjectOutput = {
@@ -130,6 +132,11 @@ const PostSchema = new mongoose.Schema({
   grade: {
     type: Number,
     default: null,
+  },
+  isdeleted: {
+    type: Boolean,
+    default: false,
+    require: true,
   },
 });
 const messageSchema = new mongoose.Schema({

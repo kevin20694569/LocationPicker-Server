@@ -64,7 +64,7 @@ class MySQLRestaurantsTableService extends MySQLTableControllerBase {
   async updateRestaurantAverage_GradeWithInputGrade(restaurant_id: String, input_grade: Number, plusPostCount: number) {
     await this.getConnection();
     let query = `UPDATE restaurants
-    SET average_grade = (average_grade * posts_count + ?) / (posts_count + ?)
+    SET average_grade = ((average_grade * posts_count) + ?) / (posts_count + ?)
     WHERE id = ?;`;
     let params = [input_grade, plusPostCount, restaurant_id];
     let results: any[];

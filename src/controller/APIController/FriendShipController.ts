@@ -134,14 +134,13 @@ class FriendShipController extends ControllerBase {
       sortedResults.push(...mediumPriorityResults);
       sortedResults.push(...lowPriorityResults);
       sortedResults.push(...lowestPriorityResults);
-      if (sortedResults.length == 0) {
+      /*if (sortedResults.length == 0) {
         userMap[request_user_id] = {
           user: userMap[request_user_id],
           friendStatus: "isSelf",
         };
         sortedResults.push(userMap[request_user_id]);
-      }
-
+      }*/
       res.json(sortedResults);
     } catch (error) {
       res.status(500);

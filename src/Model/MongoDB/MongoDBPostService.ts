@@ -53,6 +53,7 @@ class MongoDBPostService {
             spherical: true,
           },
         },
+        { $match: { isdeleted: { $ne: true } } },
         {
           $match: {
             distance: { $gt: distanceThreshold },
@@ -113,6 +114,7 @@ class MongoDBPostService {
   async getRestaurantPostsFromRestaurantID(restaurant_id: string, date: Date) {
     try {
       const results = await this.postModel.aggregate([
+        { $match: { isdeleted: { $ne: true } } },
         {
           $match: {
             restaurant_id: restaurant_id,
@@ -129,7 +131,6 @@ class MongoDBPostService {
   }
   async getNearLocationPostsFromFriendsByUserID(friend_ids: string[], distanceThreshold: number, latitude: number, longitude: number) {
     try {
-      console.log(friend_ids);
       const results = await this.postModel.aggregate([
         {
           $geoNear: {
@@ -138,6 +139,7 @@ class MongoDBPostService {
             spherical: true,
           },
         },
+        { $match: { isdeleted: { $ne: true } } },
         {
           $match: {
             user_id: { $in: friend_ids },
@@ -172,6 +174,7 @@ class MongoDBPostService {
   async getPostsByUserID(user_id: string, date: Date) {
     try {
       const results = await this.postModel.aggregate([
+        { $match: { isdeleted: { $ne: true } } },
         {
           $match: {
             user_id: user_id,
@@ -197,6 +200,7 @@ class MongoDBPostService {
             spherical: true,
           },
         },
+        { $match: { isdeleted: { $ne: true } } },
         {
           $match: {
             user_id: { $in: friend_ids },
@@ -238,27 +242,26 @@ class MongoDBPostService {
 
   async deletePost(post_id: string) {
     let objectID = new mongoose.Types.ObjectId(post_id);
-    const filter = { _id: objectID };
-    const options = {
-      returnOriginal: true,
-    };
-    const deletedPost = await this.postModel.findOneAndDelete(filter, options);
+    let set: { isdeleted: boolean } = { isdeleted: true };
+    const update = { $set: set };
+    const deletedPost = await this.postModel.findByIdAndUpdate(objectID, update);
     return deletedPost;
   }
 
-  updatePost = async (post_id: string, title?: string, content?: string, grade?: number) => {
+  updatePost = async (post_id: string, title: string | null, content: string | null, grade: number | null, mediaTitles: string[]) => {
     let objectID = new mongoose.Types.ObjectId(post_id);
 
     let set: { title?: string; content?: string; grade?: number } = {};
-    if (title) {
-      set.title = title;
-    }
-    if (content) {
-      set.content = content;
-    }
-    if (grade) {
-      set.grade = grade;
-    }
+
+    set = {
+      title: title,
+      content: content,
+      grade: grade,
+    };
+
+    mediaTitles.forEach((title, index) => {
+      set[`media.${index}.title`] = title;
+    });
     const update = { $set: set };
     const originalPost = await this.postModel.findByIdAndUpdate(objectID, update);
     return originalPost;
@@ -266,6 +269,7 @@ class MongoDBPostService {
 
   async calculateRestaurantAverage() {
     const result = await this.postModel.aggregate([
+      { $match: { isdeleted: { $ne: true } } },
       {
         $group: {
           _id: "$restaurant_id", // 根据 restaurant_id 进行分组
@@ -285,6 +289,7 @@ class MongoDBPostService {
 
   protected getRandomPostaggregate(orderby): PipelineStage[] {
     return [
+      { $match: { isdeleted: { $ne: true } } },
       {
         $group: { _id: "$restaurant_id", posts: { $push: "$$ROOT" } },
       },

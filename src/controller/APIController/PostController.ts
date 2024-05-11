@@ -208,7 +208,9 @@ class PostController extends ControllerBase {
       }
 
       await this.mongodbPostService.insertPost(title, content, mediaModel, user_id, location, restaurant_id, grade);
-      await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, grade as number, 1);
+      if (grade) {
+        await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, grade as number, 1);
+      }
       await this.mysqlRestaurantsTableService.updateRestaurantPostsCountWithInput(restaurant_id, 1);
       await this.mysqlUsersTableService.modifyUserPostsCount(user_id, 1);
       if (req.ioService) {
@@ -230,13 +232,25 @@ class PostController extends ControllerBase {
   public updatePost = async (req: Request, res: Response, next: NextFunction) => {
     try {
       let post_id = req.params.id;
-      let { title, content, grade } = req.body;
-      let originalPost = await this.mongodbPostService.updatePost(post_id, title, content, grade);
+      let { title, content, grade, mediatitles } = req.body;
+      let originalPost = await this.mongodbPostService.updatePost(post_id, title ?? null, content ?? null, grade ?? null, mediatitles ?? null);
+      if (grade != originalPost.grade) {
+        let plusPostCount = 0;
 
-      if (grade) {
+        if (grade == null && originalPost.grade != null) {
+          plusPostCount = -1;
+        }
+        if (grade != null && originalPost.grade == null) {
+          plusPostCount = 1;
+        }
+
+        if (!grade) {
+          grade = 0;
+        }
         let restaurant_id = originalPost.restaurant_id;
         let gradeGap = grade - originalPost.grade;
-        await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, gradeGap, 0);
+
+        await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, gradeGap, plusPostCount);
       }
       res.send(originalPost);
     } catch (err) {
@@ -255,14 +269,18 @@ class PostController extends ControllerBase {
       let user_id = post.user_id;
 
       let deletedPost = await this.mongodbPostService.deletePost(post_id);
+
+      if (deletedPost.grade) {
+        await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, -deletedPost.grade, -1);
+      }
       await this.mysqlRestaurantsTableService.updateRestaurantPostsCountWithInput(restaurant_id, -1);
-      await this.mysqlRestaurantsTableService.updateRestaurantAverage_GradeWithInputGrade(restaurant_id, -deletedPost.grade, -1);
+
       await this.mysqlUsersTableService.modifyUserPostsCount(user_id, -1);
       await this.mongodbReactionService.deletePostAllReactions(post_id);
-      for (const media of post.media) {
+      /*for (const media of post.media) {
         let resource_id = media.resource_id;
         await this.mediaResourceController.deletePostMedia(resource_id);
-      }
+      }*/
     } catch (err) {
       console.log(err);
       res.status(404);
